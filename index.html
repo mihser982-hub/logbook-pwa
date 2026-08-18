@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LogBook</title>
+
+  <!-- link rel="manifest" href="manifest.json" / -->
+
+  <link rel="manifest" href="/manifest.json">
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
+  <meta name="theme-color" content="#4f46e5" />
+  <link rel="icon" href="icon-192.png" />
+
+  <style>
+    :root {
+      --bg: #f7f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --primary: #4f46e5;
+      --danger: #ef4444;
+      --success: #10b981;
+      --icon-color: #374151;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 0; /* Убираем padding у body */
+      height: 100vh; /* На всю высоту */
+      overflow: hidden; /* Чтобы не было прокрутки страницы */
+    }
+
+    .app {
+      max-width: 900px;
+      margin: 0 auto;
+      background: var(--card);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+      padding: 12px;
+      height: 100vh; /* На всю высоту */
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+      flex-shrink: 0; /* Не сжимать */
+    }
+
+    .logo {
+      font-weight: 700;
+      font-size: 18px;
+      margin-right: auto;
+      color: var(--text);
+    }
+
+    input, textarea, button {
+    font: inherit;
+    padding: 6px 8px;
+    border-radius: 8px;
+    border: none; /* Убираем рамку */
+    outline: none;
+    background: #f9fafb; /* Лёгкий фон */
+    }
+
+    input:focus, textarea:focus {
+    border: none;
+    box-shadow: 0 0 0 2px rgba(79,70,229,0.15); /* Только свечение при фокусе */
+    }
+
+    #titleInput { 
+    width: 100%; 
+    flex-shrink: 0;
+    }
+
+    /* Поле редактирования и превью на всю высоту */
+    #bodyInput, #previewContainer {
+      width: 100%;
+      flex: 1; /* Занимать всё доступное место */
+      resize: none;
+      margin-top: 8px;
+      overflow-y: auto; /* Прокрутка внутри */
+    }
+
+    #bodyInput {
+      display: none;
+      min-height: 0;
+    }
+
+    #previewContainer {
+    background: #fff;
+    border: none; /* Убираем рамку */
+    border-radius: 8px;
+    padding: 10px;
+    line-height: 1.6;
+    display: block;
+    }
+
+    /* Стили для Markdown-элементов */
+    #previewContainer h1,
+    #previewContainer h2,
+    #previewContainer h3,
+    #previewContainer h4,
+    #previewContainer h5,
+    #previewContainer h6 {
+      margin-top: 1em;
+      margin-bottom: 0.5em;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    #previewContainer h1 { font-size: 1.8em; }
+    #previewContainer h2 { font-size: 1.5em; }
+    #previewContainer h3 { font-size: 1.3em; }
+    #previewContainer h4 { font-size: 1.1em; }
+
+    #previewContainer p {
+      margin-bottom: 0.8em;
+    }
+
+    #previewContainer strong {
+      font-weight: 600;
+    }
+
+    #previewContainer em {
+      font-style: italic;
+    }
+
+    #previewContainer ul,
+    #previewContainer ol {
+      margin-left: 1.5em;
+      margin-bottom: 0.8em;
+    }
+
+    #previewContainer li {
+      margin-bottom: 0.3em;
+    }
+
+    #previewContainer code {
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.9em;
+    }
+
+    #previewContainer pre {
+      background: #f3f4f6;
+      padding: 10px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin-bottom: 0.8em;
+    }
+
+    #previewContainer pre code {
+      background: none;
+      padding: 0;
+    }
+
+    #previewContainer blockquote {
+      border-left: 3px solid #e5e7eb;
+      padding-left: 12px;
+      margin-left: 0;
+      margin-bottom: 0.8em;
+      color: var(--muted);
+    }
+
+    #previewContainer table {
+      width: 100%;
+      max-width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 0.8em;
+      font-size: 0.9em;
+    }
+
+    #previewContainer th,
+    #previewContainer td {
+      border: 1px solid #e5e7eb;
+      padding: 6px 8px;
+      text-align: left;
+    }
+
+    #previewContainer th {
+      background: #f9fafb;
+      font-weight: 600;
+    }
+
+    #previewContainer input[type="checkbox"] {
+      margin-right: 6px;
+    }
+
+    #previewContainer .footnote-ref {
+      font-size: 0.8em;
+      vertical-align: super;
+      margin-left: 2px;
+    }
+
+    #previewContainer .footnotes {
+      margin-top: 1em;
+      padding-top: 0.5em;
+      border-top: 1px solid #e5e7eb;
+      font-size: 0.85em;
+      color: var(--muted);
+    }
+
+    #previewContainer a.internal-link {
+      color: var(--primary);
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    #previewContainer a.internal-link:hover {
+      color: var(--danger);
+    }
+
+    /* Стили для сворачиваемых заголовков */
+    #previewContainer .foldable-heading {
+      cursor: pointer;
+    }
+
+    #previewContainer .foldable-heading.collapsed::after {
+      content: ' ...';
+      color: var(--muted);
+      margin-left: 8px;
+    }
+
+    /* Кнопки */
+    button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: #f3f4f6;
+    color: var(--icon-color);
+    border: none; /* Убираем рамку */
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: 8px;
+    }
+
+    button:hover {
+    background: #e5e7eb; /* Подсветка при наведении */
+    color: var(--primary);
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    button.secondary {
+      background: #eef2ff;
+      border-color: #c7d2fe;
+    }
+
+    button.danger {
+      background: #fee2e2;
+      border-color: #fecaca;
+      color: #b91c1c;
+    }
+
+    button.danger:hover {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .icon {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .drawer {
+    margin-top: 12px;
+    padding: 10px;
+    background: #f9fafb;
+    border: none; /* Убираем рамку */
+    border-radius: 10px;
+    display: none;
+    overflow-y: auto;
+    flex-shrink: 0;
+    }
+
+    .drawer.open {
+      display: block;
+    }
+
+    .drawer h3 {
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: var(--muted);
+    }
+
+    .drawer .row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    #searchInput {
+    width: 100%;
+    margin-top: 8px;
+    }
+
+    .notesList {
+      margin-top: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .noteCard {
+    background: #fff;
+    border: none; /* Убираем рамку */
+    border-radius: 10px;
+    padding: 8px 10px;
+    display: grid;
+    gap: 4px;
+    }
+
+    .noteCard:hover {
+    background: #f9fafb; /* Лёгкая подсветка при наведении */
+    }
+
+    .noteCard h3 {
+      font-size: 15px;
+      margin: 0;
+    }
+
+    .noteCard .meta {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .noteCard .actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .noteCard .actions button {
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+
+    .gamePanel {
+      margin-top: 12px;
+      padding: 8px 10px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      font-size: 13px;
+    }
+
+    .gamePanel .row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .calendarPanel {
+    margin-top: 12px;
+    padding: 10px;
+    background: #f9fafb;
+    border: none; /* Убираем рамку */
+    border-radius: 10px;
+    display: none;
+    flex-shrink: 0;
+    }
+
+    .calendarPanel.open {
+      display: block;
+    }
+
+    .calendarHeader {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .calendarGrid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+    }
+
+    .calendarCell {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 6px 4px;
+      text-align: center;
+      font-size: 13px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .calendarCell:hover {
+      border-color: var(--primary);
+      background: #eef2ff;
+    }
+
+    .calendarCell.hasNote {
+      background: #ecfdf5;
+      border-color: #a7f3d0;
+      font-weight: 600;
+    }
+
+    .calendarCell.today {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+
+    .calendarWeekday {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      padding: 4px 0;
+    }
+
+    /* Стили для списка «Недавние» */
+    .recentList {
+      margin-top: 10px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .recentItem {
+    background: #fff;
+    border: none; /* Убираем рамку */
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 13px;
+    cursor: pointer;
+    }
+
+    .recentItem:hover {
+    background: #eef2ff; /* Подсветка при наведении */
+    }
+
+    .recentItem .title {
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .recentItem .time {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* Адаптация под мобильные */
+    @media (max-width: 600px) {
+      body {
+        padding: 0;
+      }
+
+      .app {
+        padding: 10px;
+      }
+
+      .logo {
+        font-size: 16px;
+      }
+
+      #previewContainer {
+        font-size: 15px;
+      }
+
+      #previewContainer table {
+        font-size: 0.85em;
+      }
+    }
+
+    .task-checkbox {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    margin: 0 7px 0 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #9aa0a6;
+    vertical-align: -4px;
+    cursor: pointer;
+    position: relative;
+    }
+
+    .task-checkbox::after {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    }
+
+    .task-checkbox[data-state="backlog"]::after {
+    content: '◌';
+    }
+
+    .task-checkbox[data-state="todo"]::after {
+    content: '';
+    }
+
+    .task-checkbox[data-state="doing"]::after {
+    content: '◐';
+    }
+
+    .task-checkbox[data-state="review"]::after {
+    content: '⚑';
+    }
+
+    .task-checkbox[data-state="done"]::after {
+    content: '✓';
+    }
+
+    .task-checkbox[data-state="cancelled"]::after {
+    content: '×';
+    }
+
+    /* Цвета статусов задач */
+    .task-checkbox[data-state="backlog"] {
+    background: #94a3b8; /* серо-синий */
+    }
+
+    .task-checkbox[data-state="todo"] {
+    background: #64748b; /* серый */
+    }
+
+    .task-checkbox[data-state="doing"] {
+    background: #3b82f6; /* синий */
+    }
+
+    .task-checkbox[data-state="review"] {
+    background: #f59e0b; /* оранжевый */
+    }
+
+    .task-checkbox[data-state="done"] {
+    background: #22c55e; /* зелёный */
+    }
+
+    .task-checkbox[data-state="cancelled"] {
+    background: #ef4444; /* красный */
+    }
+
+    .task-checkbox:hover {
+    filter: brightness(0.88);
+    }
+
+    .task-text-done,
+    .task-text-cancelled {
+    color: var(--muted);
+    text-decoration: line-through;
+    }
+
+    /* Моноширинный шрифт только в режиме редактирования */
+    #bodyInput {
+    font-family: ui-monospace, SFMono-Regular, Consolas,
+        "Liberation Mono", Menlo, Monaco, "Courier New", monospace;
+    font-size: 15px;
+    line-height: 1.65;
+    tab-size: 2;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="toolbar">
+      <!-- Кнопка «Назад» -->
+      <button id="backBtn" title="Назад" disabled>
+        <svg class="icon" viewBox="0 0 24 24">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+      </button>
+
+      <!-- Кнопка «Вперёд» -->
+      <button id="forwardBtn" title="Вперёд" disabled>
+        <svg class="icon" viewBox="0 0 24 24">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+      </button>
+
+      <div class="logo">LogBook</div>
+
+      <button id="menuBtn" class="secondary" title="Меню">
+        <svg class="icon" viewBox="0 0 24 24">
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+
+      <button id="calendarBtn" title="Календарь">
+        <svg class="icon" viewBox="0 0 24 24">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+      </button>
+
+      <button id="exportBtn" title="Экспортировать резервную копию">
+        <svg class="icon" viewBox="0 0 24 24">
+            <path d="M12 3v12"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <path d="M5 21h14"></path>
+        </svg>
+        </button>
+
+        <button id="importBtn" title="Импортировать резервную копию">
+        <svg class="icon" viewBox="0 0 24 24">
+            <path d="M12 21V9"></path>
+            <polyline points="7 14 12 9 17 14"></polyline>
+            <path d="M5 3h14"></path>
+        </svg>
+        </button>
+
+        <input
+        id="importFileInput"
+        type="file"
+        accept="application/json,.json"
+        hidden
+        />
+
+      <button id="editToggleBtn" title="Редактировать">
+        <svg class="icon" viewBox="0 0 24 24">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+        </svg>
+      </button>
+
+      <button id="deleteNoteBtn" class="danger" title="Удалить">
+        <svg class="icon" viewBox="0 0 24 24">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+      </button>
+    </div>
+
+    <input id="titleInput" type="text" placeholder="Заголовок заметки" />
+    <textarea id="bodyInput" placeholder="Текст заметки (Markdown)..."></textarea>
+    <div id="previewContainer"></div>
+
+    <!-- Скрытая панель: недавние, поиск, список заметок, игровые механики -->
+    <div id="drawer" class="drawer">
+      <h3>Недавние</h3>
+      <div id="recentList" class="recentList"></div>
+
+      <h3 style="margin-top: 12px;">Поиск и все заметки</h3>
+      <input id="searchInput" type="text" placeholder="Поиск по заметкам..." />
+      <div id="notesList" class="notesList"></div>
+
+      <div class="gamePanel">
+        <div><strong>Игровые механики (заготовка)</strong></div>
+        <div class="row">
+          <span>Очки: <strong id="scoreEl">0</strong></span>
+          <span>Уровень: <strong id="levelEl">1</strong></span>
+          <button id="claimDailyBtn" class="secondary" title="Забрать ежедневный бонус">
+            <svg class="icon" viewBox="0 0 24 24">
+              <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"></path>
+              <path d="M4 6v12a2 2 0 0 0 2 2h14v-4"></path>
+              <path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Панель календаря -->
+    <div id="calendarPanel" class="calendarPanel">
+      <div class="calendarHeader">
+        <select id="calendarMonthSelect"></select>
+        <select id="calendarYearSelect"></select>
+        <button id="closeCalendarBtn" class="secondary" title="Закрыть календарь">
+          <svg class="icon" viewBox="0 0 24 24">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="calendarGrid" id="calendarWeekdaysGrid"></div>
+      <div class="calendarGrid" id="calendarDaysGrid"></div>
+    </div>
+  </div>
+
+  <script src="markdown-it.min.js"></script>
+  <script src="markdown-it-checkbox.min.js"></script>
+  <script src="markdown-it-footnote.min.js"></script>
+
+  <script src="app.js"></script>
+</body>
+</html>
