@@ -441,6 +441,183 @@ async function importBackupFromFile(file) {
 }
 
 // =========================
+// 1.2) Ручная синхронизация с локальным Node.js-сервером
+// =========================
+
+// Адрес API на том же сервере, с которого открыто приложение.
+// При запуске через Node.js это будет http://IP-ПК:3000/api/sync.
+// Для GitHub Pages эта функция намеренно не используется:
+// GitHub Pages не может подключиться к домашнему HTTP-серверу.
+const SYNC_API_URL = './api/sync';
+
+// Проверяем, что запись безопасно можно синхронизировать.
+function isValidSyncNote(note) {
+  return (
+    note &&
+    typeof note === 'object' &&
+    typeof note.syncId === 'string' &&
+    note.syncId.length > 0 &&
+    typeof note.title === 'string' &&
+    typeof note.body === 'string'
+  );
+}
+
+// Берёт две версии набора заметок и объединяет их.
+// Для совпадающего syncId побеждает версия с самым новым updatedAt.
+function mergeNotesForSync(localNotes, serverNotes) {
+  const bySyncId = new Map();
+
+  for (const note of [...localNotes, ...serverNotes]) {
+    if (!isValidSyncNote(note)) continue;
+
+    const existing = bySyncId.get(note.syncId);
+
+    if (!existing || Number(note.updatedAt || 0) > Number(existing.updatedAt || 0)) {
+      bySyncId.set(note.syncId, note);
+    }
+  }
+
+  return [...bySyncId.values()];
+}
+
+// Заменяет локальную копию заметок объединённым набором.
+// Локальный IndexedDB id сохраняется для уже существующих заметок;
+// новым заметкам IndexedDB выдаёт свой id автоматически.
+async function applyMergedNotesToLocal(mergedNotes) {
+  const localNotes = await getAllNotes();
+  const localBySyncId = new Map(
+    localNotes
+      .filter((note) => note.syncId)
+      .map((note) => [note.syncId, note])
+  );
+
+  let added = 0;
+  let updated = 0;
+  let unchanged = 0;
+
+  for (const mergedNote of mergedNotes) {
+    const localNote = localBySyncId.get(mergedNote.syncId);
+
+    if (!localNote) {
+      // Не переносим числовой id: он локален для конкретного браузера.
+      const { id, ...noteWithoutId } = mergedNote;
+      await saveNote(noteWithoutId);
+      added++;
+      continue;
+    }
+
+    const localUpdatedAt = Number(localNote.updatedAt || 0);
+    const mergedUpdatedAt = Number(mergedNote.updatedAt || 0);
+
+    if (mergedUpdatedAt > localUpdatedAt) {
+      await saveNote({
+        ...mergedNote,
+        id: localNote.id,
+        createdAt: localNote.createdAt || mergedNote.createdAt || Date.now()
+      });
+      updated++;
+    } else {
+      unchanged++;
+    }
+  }
+
+  return { added, updated, unchanged };
+}
+
+// Выполняет полный ручной обмен с сервером.
+async function syncWithServer() {
+  const syncBtn = document.getElementById('syncBtn');
+
+  try {
+    if (syncBtn) {
+      syncBtn.disabled = true;
+      syncBtn.title = 'Синхронизация…';
+    }
+
+    // 1. Загружаем существующую общую копию.
+    const getResponse = await fetch(SYNC_API_URL, {
+      cache: 'no-store'
+    });
+
+    if (!getResponse.ok) {
+      throw new Error(`Сервер вернул HTTP ${getResponse.status}`);
+    }
+
+    const serverData = await getResponse.json();
+
+    if (!serverData || !Array.isArray(serverData.notes)) {
+      throw new Error('Сервер вернул данные в неожиданном формате.');
+    }
+
+    // 2. Объединяем серверную и локальную копии.
+    const localNotes = await getAllNotes();
+    const mergedNotes = mergeNotesForSync(localNotes, serverData.notes);
+
+    // 3. Записываем результат в текущий браузер.
+    const localResult = await applyMergedNotesToLocal(mergedNotes);
+
+    // 4. Отправляем объединённую копию обратно на сервер.
+    const putResponse = await fetch(SYNC_API_URL, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        app: 'LogBook',
+        syncVersion: 1,
+        updatedAt: Date.now(),
+        notes: mergedNotes
+      })
+    });
+
+    if (!putResponse.ok) {
+      throw new Error(`Не удалось сохранить данные: HTTP ${putResponse.status}`);
+    }
+
+    // 5. Обновляем интерфейс после получения новых заметок.
+    await renderNotesList();
+    await renderRecentList();
+
+    // Если открытая заметка пришла с сервера в более новой версии,
+    // заново открываем её, чтобы на экране был актуальный текст.
+    if (currentNoteId) {
+      const notesAfterSync = await getAllNotes();
+      const currentNote = notesAfterSync.find((note) => note.id === currentNoteId);
+
+      if (currentNote) {
+        currentNoteId = null;
+        openNote(currentNote);
+      }
+    }
+
+    const serverResult = await putResponse.json();
+
+    alert(
+      'Синхронизация завершена.\n\n' +
+      `На этом устройстве добавлено: ${localResult.added}\n` +
+      `Обновлено: ${localResult.updated}\n` +
+      `Без изменений: ${localResult.unchanged}\n` +
+      `Всего на сервере: ${serverResult.notesCount}`
+    );
+  } catch (error) {
+    console.error('Ошибка синхронизации:', error);
+
+    alert(
+      'Не удалось выполнить синхронизацию.\n\n' +
+      'Проверьте, что Node.js-сервер запущен, ' +
+      'устройство подключено к той же Wi‑Fi-сети, ' +
+      'и LogBook открыт через адрес ПК вида http://IP-ПК:3000/.\n\n' +
+      `Техническая причина: ${error.message}`
+    );
+  } finally {
+    if (syncBtn) {
+      syncBtn.disabled = false;
+      syncBtn.title = 'Синхронизировать';
+    }
+  }
+}
+
+// =========================
 // 2) Игровые механики (без изменений, как было)
 // =========================
 
@@ -1102,8 +1279,10 @@ async function initApp() {
   const exportBtn = document.getElementById('exportBtn');
   const importBtn = document.getElementById('importBtn');
   const importFileInput = document.getElementById('importFileInput');
+  const syncBtn = document.getElementById('syncBtn');
 
   exportBtn.onclick = exportBackup;
+  syncBtn.onclick = syncWithServer;
 
   importBtn.onclick = () => {
     importFileInput.value = '';

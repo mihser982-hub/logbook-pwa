@@ -1,4 +1,4 @@
-const CACHE_NAME = 'logbook-v5';
+const CACHE_NAME = 'logbook-v7';
 const ASSETS = [
   './',
   './index.html',
