@@ -155,6 +155,26 @@ const STORE_NAME = 'notes';
 
 let db = null;
 
+// Уникальный постоянный идентификатор заметки.
+// Один раз создаётся для заметки и переносится между ПК, Android,
+// резервными копиями и сервером синхронизации.
+function createSyncId() {
+  return crypto.randomUUID();
+}
+
+// Нормализует старую или новую заметку.
+// Старым заметкам без syncId будет выдан новый постоянный идентификатор.
+function normalizeNote(note) {
+  const now = Date.now();
+
+  return {
+    ...note,
+    syncId: note.syncId || createSyncId(),
+    createdAt: Number(note.createdAt) || now,
+    updatedAt: Number(note.updatedAt) || now
+  };
+}
+
 function openDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -203,16 +223,38 @@ async function saveNote(note) {
     const request = store.put(normalizedNote);
 
     request.onsuccess = () => {
-      const savedNote = {
+      resolve({
         ...normalizedNote,
         id: request.result
-      };
-
-      resolve(savedNote);
+      });
     };
 
     request.onerror = () => reject(request.error);
   });
+}
+
+// Один раз добавляет syncId старым заметкам.
+// Ничего не удаляет и не меняет содержание заметок.
+async function migrateExistingNotesForSync() {
+  const notes = await getAllNotes();
+  let migrated = 0;
+
+  for (const note of notes) {
+    if (note.syncId) continue;
+
+    await saveNote({
+      ...note,
+      syncId: createSyncId(),
+      createdAt: note.createdAt || Date.now(),
+      updatedAt: note.updatedAt || Date.now()
+    });
+
+    migrated++;
+  }
+
+  if (migrated > 0) {
+    console.log(`Подготовлено для синхронизации заметок: ${migrated}`);
+  }
 }
 
 // Удалить заметку по id
@@ -633,7 +675,6 @@ async function saveCurrentNote() {
   }
 
   const now = Date.now();
-
   let note;
 
   if (currentNoteId) {
@@ -991,9 +1032,10 @@ async function openOrCreateTodayDaily() {
 
 
     // Сохраняем в базу и получаем id
-    const id = await saveNote(note);
-    note.id = id; // Присваиваем id заметке
+    /* const id = await saveNote(note);
+    note.id = id; // Присваиваем id заметке */
 
+    note = await saveNote(note);
 
     // Открываем в редакторе
     openNote(note);
@@ -1006,6 +1048,7 @@ async function openOrCreateTodayDaily() {
 
 async function initApp() {
   await openDB();
+  await migrateExistingNotesForSync();
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
