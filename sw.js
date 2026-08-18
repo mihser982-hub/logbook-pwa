@@ -1,12 +1,12 @@
 const CACHE_NAME = 'logbook-v1';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/app.js',
-  '/manifest.json',
-  '/markdown-it.min.js',
-  '/markdown-it-checkbox.min.js',
-  '/markdown-it-footnote.min.js'
+  './',
+  './index.html',
+  './app.js',
+  './manifest.json',
+  './markdown-it.min.js',
+  './markdown-it-checkbox.min.js',
+  './markdown-it-footnote.min.js'
 ];
 
 // Установка: кэшируем статику

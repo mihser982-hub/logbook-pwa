@@ -2,7 +2,7 @@
   "name": "LogBook",
   "short_name": "LogBook",
   "description": "Ежедневные заметки с Markdown",
-  "start_url": "/",
+  "start_url": "/logbook-pwa/",
   "display": "standalone",
   "background_color": "#1e1e1e",
   "theme_color": "#1e1e1e",
