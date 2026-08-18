@@ -194,14 +194,23 @@ async function findNoteByTitle(title) {
   return notes.find((n) => n.title === title) || null;
 }
 
-// Сохранить заметку (создать или обновить)
 async function saveNote(note) {
+  const normalizedNote = normalizeNote(note);
+
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const store = tx.objectStore(STORE_NAME);
-    const request = store.put(note);
+    const request = store.put(normalizedNote);
 
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      const savedNote = {
+        ...normalizedNote,
+        id: request.result
+      };
+
+      resolve(savedNote);
+    };
+
     request.onerror = () => reject(request.error);
   });
 }
@@ -614,7 +623,6 @@ async function renderRecentList() {
   }
 }
 
-// Сохранить текущую заметку
 async function saveCurrentNote() {
   const title = titleInput.value.trim();
   const body = bodyInput.value.trim();
@@ -627,32 +635,58 @@ async function saveCurrentNote() {
   const now = Date.now();
 
   let note;
+
   if (currentNoteId) {
-    note = { id: currentNoteId, title, body, createdAt: now, updatedAt: now };
+    const notes = await getAllNotes();
+    const existingNote = notes.find((item) => item.id === currentNoteId);
+
+    note = {
+      ...existingNote,
+      id: currentNoteId,
+      title,
+      body,
+      createdAt: existingNote?.createdAt || now,
+      updatedAt: now
+    };
   } else {
-    note = { title, body, createdAt: now, updatedAt: now };
+    note = {
+      title,
+      body,
+      createdAt: now,
+      updatedAt: now
+    };
   }
 
-  await saveNote(note);
+  const savedNote = await saveNote(note);
+  currentNoteId = savedNote.id;
+
   await renderNotesList();
   addScore(10);
   alert('Заметка сохранена!');
 }
 
-// Автосохранение текущей заметки
 async function autoSaveCurrentNote() {
-  if (!currentNoteId) return; // Нет открытой заметки
-  
+  if (!currentNoteId) return;
+
   const title = titleInput.value.trim();
   const body = bodyInput.value.trim();
-  
-  if (!title && !body) return; // Пустая заметка — не сохраняем
-  
-  const now = Date.now();
-  const note = { id: currentNoteId, title, body, createdAt: now, updatedAt: now };
-  
-  await saveNote(note);
-  console.log('Сохранено при переключении:', note.title);
+
+  if (!title && !body) return;
+
+  const notes = await getAllNotes();
+  const existingNote = notes.find((item) => item.id === currentNoteId);
+
+  if (!existingNote) return;
+
+  const savedNote = await saveNote({
+    ...existingNote,
+    title,
+    body,
+    createdAt: existingNote.createdAt,
+    updatedAt: Date.now()
+  });
+
+  currentNoteId = savedNote.id;
 }
 
 // Удалить текущую заметку
@@ -676,12 +710,39 @@ function normalizeTaskMarkers(markdown) {
   );
 }
 
+// Превращает внутренние ссылки LogBook:
+// [[Название заметки]]
+// [[Название заметки|Текст ссылки]]
+//
+// в обычные Markdown-ссылки с техническим адресом internal:.
+// markdown-it безопасно отрисует их как <a>.
+function convertInternalLinksToMarkdown(markdown) {
+  return markdown.replace(
+    /\[\[([^|\]]+)(?:\|([^\]]+))?\]\]/g,
+    (match, rawTitle, rawAlias) => {
+      const title = rawTitle.trim();
+      const text = (rawAlias || rawTitle).trim();
+
+      // encodeURIComponent нужен, чтобы пробелы, кириллица и символы
+      // в названии заметки не ломали адрес ссылки.
+      const href = `internal:${encodeURIComponent(title)}`;
+
+      return `[${text}](${href})`;
+    }
+  );
+}
+
 function renderPreview() {
   const markdownText = normalizeTaskMarkers(bodyInput.value);
-  const html = md.render(markdownText);
-  const processedHtml = processInternalLinks(html);
 
-  previewContainerEl.innerHTML = processedHtml;
+  // Сначала превращаем [[Название]] в безопасную Markdown-ссылку.
+  // Это делаем ДО markdown-it, пока исходный текст ещё не превращён в HTML.
+  const markdownWithInternalLinks = convertInternalLinksToMarkdown(markdownText);
+
+  // Затем markdown-it превращает весь текст в HTML.
+  const html = md.render(markdownWithInternalLinks);
+
+  previewContainerEl.innerHTML = html;
 
   decorateTaskCheckboxes();
   attachInternalLinkHandlers();
@@ -786,14 +847,25 @@ function decorateTaskCheckboxes() {
   });
 }
 
-// Навесить обработчики кликов на внутренние ссылки
 function attachInternalLinkHandlers() {
-  const links = previewContainerEl.querySelectorAll('a.internal-link');
+  const links = previewContainerEl.querySelectorAll('a');
+
   for (const link of links) {
-    link.addEventListener('click', async (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const noteTitle = link.dataset.noteTitle;
+    const href = link.getAttribute('href') || '';
+
+    // Обычные интернет-ссылки не трогаем.
+    if (!href.startsWith('internal:')) continue;
+
+    link.classList.add('internal-link');
+
+    link.addEventListener('click', async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      // Убираем "internal:" и возвращаем исходное название заметки.
+      const encodedTitle = href.slice('internal:'.length);
+      const noteTitle = decodeURIComponent(encodedTitle);
+
       await handleInternalLinkClick(noteTitle);
     });
   }
@@ -827,16 +899,6 @@ function processFoldableHeadings() {
   }
 }
 
-// Обработать внутренние ссылки [[Название]] и [[Название|Псевдоним]] в HTML
-function processInternalLinks(html) {
-  // Регулярное выражение для [[Название]] или [[Название|Псевдоним]]
-  // Заменяем на <a class="internal-link" data-note-title="Название">Псевдоним</a>
-  return html.replace(/\[\[([^|\]]+)(?:\|([^\]]+))?\]\]/g, (match, noteTitle, alias) => {
-    const linkText = alias || noteTitle; // Псевдоним или название
-    return `<a class="internal-link" data-note-title="${noteTitle}">${linkText}</a>`;
-  });
-}
-
 // Обработчик клика по внутренней ссылке
 async function handleInternalLinkClick(noteTitle) {
   console.log('Клик по ссылке на:', noteTitle);
@@ -857,9 +919,8 @@ async function handleInternalLinkClick(noteTitle) {
         createdAt: now,
         updatedAt: now
       };
-      const id = await saveNote(newNote);
-      newNote.id = id;
-      openNote(newNote);
+      const savedNote = await saveNote(newNote);
+      openNote(savedNote);
       await renderNotesList();
       addScore(10);
     }
@@ -1155,9 +1216,8 @@ async function handleCalendarDayClick(day, month, year) {
         createdAt: now,
         updatedAt: now
       };
-      const id = await saveNote(newNote);
-      newNote.id = id;
-      openNote(newNote);
+      const savedNote = await saveNote(newNote);
+      openNote(savedNote);
       closeCalendarPanel();
       // Перерисовываем список заметок и календарь, чтобы увидеть новую заметку
       await renderNotesList();
