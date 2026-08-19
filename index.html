@@ -8,11 +8,7 @@
   <!-- link rel="manifest" href="manifest.json" / -->
 
   <link rel="manifest" href="./manifest.json">
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js');
-    }
-  </script>
+  
   <meta name="theme-color" content="#4f46e5" />
   <link rel="icon" href="icon-192.png" />
 
@@ -85,6 +81,7 @@
     #titleInput { 
     width: 100%; 
     flex-shrink: 0;
+    font-weight: 700;
     }
 
     /* Поле редактирования и превью на всю высоту */
@@ -584,6 +581,152 @@
     line-height: 1.65;
     tab-size: 2;
     }
+
+    /* Модальные панели поверх заметки */
+    .panelOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    background: rgba(17, 24, 39, 0.35);
+    padding: 10px;
+    }
+
+    .panelOverlay.open {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    }
+
+    .panelModal {
+    width: min(900px, 100%);
+    max-height: calc(100vh - 20px);
+    margin-top: 0;
+    padding: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border-radius: 12px;
+    background: var(--card);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+    }
+
+    .panelModalHeader {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    margin-bottom: 10px;
+    }
+
+    .panelModalTitle {
+    margin-right: auto;
+    font-size: 16px;
+    font-weight: 700;
+    }
+
+    .panelModalClose {
+    flex: 0 0 auto;
+    }
+
+    .panelModalBody {
+    min-height: 0;
+    overflow-y: auto;
+    }
+
+    /* В overlay панели больше не участвуют в обычной раскладке */
+    .panelModal .drawer,
+    .panelModal .calendarPanel {
+    display: block;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    overflow: visible;
+    }
+
+    /* Когда панель перенесена в модальное окно, штатный класс open не нужен */
+    .panelModal .drawer.open,
+    .panelModal .calendarPanel.open {
+    display: block;
+    }
+
+    #calendarOverlay .panelModal {
+    max-width: 420px;
+    }
+
+    @media (max-width: 600px) {
+    .panelOverlay {
+        padding: 14px 10px;
+    }
+
+    .panelOverlay.open {
+        align-items: flex-start;
+    }
+
+    .panelModal {
+        width: 100%;
+        max-width: 520px;
+        max-height: calc(100vh - 28px);
+        margin-top: 18px;
+        border-radius: 14px;
+        padding: 12px 10px;
+    }
+    }
+
+    /* Меню: равные отступы сверху и снизу на телефоне */
+    @media (max-width: 600px) {
+    #menuOverlay {
+        padding-top: 22px;
+        padding-bottom: 22px;
+    }
+
+    #menuOverlay .panelModal {
+        max-height: calc(100vh - 44px);
+        margin-top: 0;
+    }
+    }
+
+    /* Селекторы месяца и года в календаре */
+    .calendarHeader select {
+    appearance: none;
+    -webkit-appearance: none;
+    min-height: 36px;
+    padding: 7px 34px 7px 10px;
+    border: 1px solid #dbe1ea;
+    border-radius: 10px;
+    background-color: #fff;
+    color: var(--text);
+    font-weight: 600;
+    cursor: pointer;
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+        linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position:
+        calc(100% - 15px) 15px,
+        calc(100% - 10px) 15px;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    }
+
+    .calendarHeader select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.14);
+    }
+
+    .calendarHeader select:hover {
+    border-color: #b9c2d0;
+    background-color: #f9fafb;
+    }
+
+    #calendarMonthSelect {
+    flex: 1 1 170px;
+    }
+
+    #calendarYearSelect {
+    flex: 0 1 105px;
+    }
   </style>
 </head>
 <body>
@@ -675,43 +818,73 @@
     <textarea id="bodyInput" placeholder="Текст заметки (Markdown)..."></textarea>
     <div id="previewContainer"></div>
 
-    <!-- Скрытая панель: недавние, поиск, список заметок, игровые механики -->
-    <div id="drawer" class="drawer">
-      <h3>Недавние</h3>
-      <div id="recentList" class="recentList"></div>
-
-      <h3 style="margin-top: 12px;">Поиск и все заметки</h3>
-      <input id="searchInput" type="text" placeholder="Поиск по заметкам..." />
-      <div id="notesList" class="notesList"></div>
-
-      <div class="gamePanel">
-        <div><strong>Игровые механики (заготовка)</strong></div>
-        <div class="row">
-          <span>Очки: <strong id="scoreEl">0</strong></span>
-          <span>Уровень: <strong id="levelEl">1</strong></span>
-          <button id="claimDailyBtn" class="secondary" title="Забрать ежедневный бонус">
+    <!-- Оверлей меню -->
+    <div id="menuOverlay" class="panelOverlay" aria-hidden="true">
+    <section class="panelModal" role="dialog" aria-modal="true" aria-labelledby="menuModalTitle">
+        <div class="panelModalHeader">
+        <h2 id="menuModalTitle" class="panelModalTitle">Меню</h2>
+        <button id="closeMenuBtn" class="panelModalClose" title="Закрыть меню" aria-label="Закрыть меню">
             <svg class="icon" viewBox="0 0 24 24">
-              <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"></path>
-              <path d="M4 6v12a2 2 0 0 0 2 2h14v-4"></path>
-              <path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"></path>
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="6"></line>
             </svg>
-          </button>
+        </button>
         </div>
-      </div>
+
+        <div class="panelModalBody">
+        <div id="drawer" class="drawer">
+            <h3>Недавние</h3>
+            <div id="recentList" class="recentList"></div>
+
+            <h3 style="margin-top: 12px;">Поиск и все заметки</h3>
+            <input id="searchInput" type="text" placeholder="Поиск по заметкам..." />
+            <div id="notesList" class="notesList"></div>
+
+            <div class="gamePanel">
+            <div><strong>Игровые механики (заготовка)</strong></div>
+            <div class="row">
+                <span>Очки: <strong id="scoreEl">0</strong></span>
+                <span>Уровень: <strong id="levelEl">1</strong></span>
+                <button id="claimDailyBtn" class="secondary" title="Забрать ежедневный бонус">
+                <svg class="icon" viewBox="0 0 24 24">
+                    <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"></path>
+                    <path d="M4 6v12a2 2 0 0 0 2 2h14v-4"></path>
+                    <path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"></path>
+                </svg>
+                </button>
+            </div>
+            </div>
+        </div>
+        </div>
+    </section>
     </div>
 
-    <!-- Панель календаря -->
-    <div id="calendarPanel" class="calendarPanel">
-      <div class="calendarHeader">
-        <select id="calendarMonthSelect"></select>
-        <select id="calendarYearSelect"></select>
-        <button id="closeCalendarBtn" class="secondary" title="Закрыть календарь">
-          <svg class="icon" viewBox="0 0 24 24">
+    <!-- Оверлей календаря -->
+    <div id="calendarOverlay" class="panelOverlay" aria-hidden="true">
+    <section class="panelModal" role="dialog" aria-modal="true" aria-labelledby="calendarModalTitle">
+        <div class="panelModalHeader">
+        <h2 id="calendarModalTitle" class="panelModalTitle">Календарь</h2>
+        <button id="closeCalendarBtn" class="panelModalClose" title="Закрыть календарь" aria-label="Закрыть календарь">
+            <svg class="icon" viewBox="0 0 24 24">
             <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
+            <line x1="6" y1="6" x2="18" y2="6"></line>
+            </svg>
         </button>
-      </div>
+        </div>
+
+        <div class="panelModalBody">
+        <div id="calendarPanel" class="calendarPanel">
+            <div class="calendarHeader">
+            <select id="calendarMonthSelect"></select>
+            <select id="calendarYearSelect"></select>
+            </div>
+
+            <div class="calendarGrid" id="calendarWeekdaysGrid"></div>
+            <div class="calendarGrid" id="calendarDaysGrid"></div>
+        </div>
+        </div>
+    </section>
+    </div>
 
       <div class="calendarGrid" id="calendarWeekdaysGrid"></div>
       <div class="calendarGrid" id="calendarDaysGrid"></div>

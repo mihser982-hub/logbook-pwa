@@ -150,8 +150,206 @@ const md = window.markdownit({
 // =========================
 
 const DB_NAME = 'notes-pwa-db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'notes';
+const SETTINGS_STORE_NAME = 'settings';
+
+// =========================
+// 1.0) Шифрование: базовые функции
+// Пока не меняет заметки и не включает защиту.
+// =========================
+
+const CRYPTO_SETTINGS_KEY = 'encryption-config';
+const CRYPTO_VERSION = 1;
+const PBKDF2_ITERATIONS = 600000;
+const SALT_BYTES = 16;
+const IV_BYTES = 12;
+
+let encryptionEnabled = false;
+let masterKey = null;
+let encryptionConfig = null;
+
+function bytesToBase64(bytes) {
+  let binary = '';
+  const chunkSize = 0x8000;
+
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(
+      ...bytes.subarray(offset, offset + chunkSize)
+    );
+  }
+
+  return btoa(binary);
+}
+
+function base64ToBytes(base64) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  return bytes;
+}
+
+async function deriveMasterKey(password, saltBytes) {
+  const passwordBytes = new TextEncoder().encode(password);
+
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    passwordBytes,
+    'PBKDF2',
+    false,
+    ['deriveKey']
+  );
+
+  return crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      hash: 'SHA-256',
+      salt: saltBytes,
+      iterations: PBKDF2_ITERATIONS
+    },
+    keyMaterial,
+    {
+      name: 'AES-GCM',
+      length: 256
+    },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+async function encryptJson(value, key) {
+  const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
+  const plaintext = new TextEncoder().encode(JSON.stringify(value));
+
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    plaintext
+  );
+
+  return {
+    iv: bytesToBase64(iv),
+    ciphertext: bytesToBase64(new Uint8Array(ciphertext))
+  };
+}
+
+async function decryptJson(encryptedValue, key) {
+  const iv = base64ToBytes(encryptedValue.iv);
+  const ciphertext = base64ToBytes(encryptedValue.ciphertext);
+
+  const plaintext = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    ciphertext
+  );
+
+  return JSON.parse(new TextDecoder().decode(plaintext));
+}
+
+function getSettingsStore(mode = 'readonly') {
+  return db.transaction(SETTINGS_STORE_NAME, mode)
+    .objectStore(SETTINGS_STORE_NAME);
+}
+
+function requestToPromise(request) {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function loadEncryptionConfig() {
+  const record = await requestToPromise(
+    getSettingsStore().get(CRYPTO_SETTINGS_KEY)
+  );
+
+  encryptionConfig = record?.value || null;
+  encryptionEnabled = Boolean(encryptionConfig);
+
+  return encryptionConfig;
+}
+
+async function saveEncryptionConfig(config) {
+  const transaction = db.transaction(SETTINGS_STORE_NAME, 'readwrite');
+  const store = transaction.objectStore(SETTINGS_STORE_NAME);
+
+  await requestToPromise(
+    store.put({
+      key: CRYPTO_SETTINGS_KEY,
+      value: config
+    })
+  );
+
+  encryptionConfig = config;
+  encryptionEnabled = true;
+}
+
+async function createEncryptionConfig(password) {
+  if (typeof password !== 'string' || password.length < 12) {
+    throw new Error('Пароль должен содержать не менее 12 символов.');
+  }
+
+  const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES));
+  const key = await deriveMasterKey(password, salt);
+
+  const verifier = await encryptJson(
+    {
+      purpose: 'logbook-password-verifier',
+      version: CRYPTO_VERSION
+    },
+    key
+  );
+
+  const config = {
+    version: CRYPTO_VERSION,
+    kdf: {
+      name: 'PBKDF2',
+      hash: 'SHA-256',
+      iterations: PBKDF2_ITERATIONS,
+      salt: bytesToBase64(salt)
+    },
+    cipher: {
+      name: 'AES-GCM',
+      keyLength: 256
+    },
+    verifier,
+    createdAt: Date.now()
+  };
+
+  await saveEncryptionConfig(config);
+  masterKey = key;
+
+  return config;
+}
+
+async function unlockEncryption(password) {
+  const config = await loadEncryptionConfig();
+
+  if (!config) {
+    throw new Error('Шифрование ещё не настроено.');
+  }
+
+  const salt = base64ToBytes(config.kdf.salt);
+  const key = await deriveMasterKey(password, salt);
+
+  const verifier = await decryptJson(config.verifier, key);
+
+  if (
+    verifier?.purpose !== 'logbook-password-verifier' ||
+    verifier?.version !== CRYPTO_VERSION
+  ) {
+    throw new Error('Проверочный блок имеет неверный формат.');
+  }
+
+  masterKey = key;
+  encryptionEnabled = true;
+
+  return true;
+}
 
 let db = null;
 
@@ -181,8 +379,18 @@ function openDB() {
 
     request.onupgradeneeded = (event) => {
       const database = event.target.result;
+
       if (!database.objectStoreNames.contains(STORE_NAME)) {
-        database.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+        database.createObjectStore(STORE_NAME, {
+          keyPath: 'id',
+          autoIncrement: true
+        });
+      }
+
+      if (!database.objectStoreNames.contains(SETTINGS_STORE_NAME)) {
+        database.createObjectStore(SETTINGS_STORE_NAME, {
+          keyPath: 'key'
+        });
       }
     };
 
@@ -387,7 +595,7 @@ async function importBackupFromFile(file) {
     const titleKey = incomingNote.title || '';
     const existingNote = existingByTitle.get(titleKey);
 
-    const incomingUpdatedAt = Number(incomingNote.updatedAt || 0);
+    //const incomingUpdatedAt = Number(incomingNote.updatedAt || 0);
 
     if (!existingNote) {
       // ID не переносим: каждая IndexedDB создаёт свой числовой ID.
@@ -405,31 +613,38 @@ async function importBackupFromFile(file) {
 
     const existingUpdatedAt = Number(existingNote.updatedAt || 0);
 
-    if (incomingUpdatedAt > existingUpdatedAt) {
-      await saveNote({
-        ...incomingNote,
-        id: existingNote.id,
-        createdAt: existingNote.createdAt || incomingNote.createdAt || Date.now(),
-        updatedAt: incomingNote.updatedAt || Date.now()
-      });
+   await saveNote({
+      ...incomingNote,
+      id: existingNote.id,
+      createdAt: existingNote.createdAt || incomingNote.createdAt || Date.now(),
+      updatedAt: incomingNote.updatedAt || Date.now()
+    });
 
-      updated++;
-    } else {
-      skipped++;
-    }
+    updated++;
   }
 
   await renderNotesList();
   await renderRecentList();
 
   const notesAfterImport = await getAllNotes();
-  const currentNoteAfterImport = notesAfterImport.find(
-    (note) => note.id === currentNoteId
+  const todayTitle = getTodayDailyTitle();
+
+  const todayNoteAfterImport = notesAfterImport.find(
+    (note) => note.title === todayTitle
   );
 
-  if (currentNoteAfterImport) {
+  if (todayNoteAfterImport) {
     currentNoteId = null;
-    openNote(currentNoteAfterImport);
+    openNote(todayNoteAfterImport);
+  } else if (currentNoteId) {
+    const currentNoteAfterImport = notesAfterImport.find(
+      (note) => note.id === currentNoteId
+    );
+
+    if (currentNoteAfterImport) {
+      currentNoteId = null;
+      openNote(currentNoteAfterImport);
+    }
   }
 
   alert(
@@ -1228,11 +1443,16 @@ async function initApp() {
   await migrateExistingNotesForSync();
 
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js')
-        .then((reg) => console.log('SW registered:', reg.scope))
-        .catch((err) => console.error('SW error:', err));
-    });
+    navigator.serviceWorker.getRegistrations()
+      .then((registrations) => Promise.all(
+        registrations.map((registration) => registration.unregister())
+      ))
+      .then(() => caches.keys())
+      .then((cacheNames) => Promise.all(
+        cacheNames.map((cacheName) => caches.delete(cacheName))
+      ))
+      .then(() => console.log('Service Worker и его кэш временно отключены.'))
+      .catch((error) => console.error('Не удалось отключить Service Worker:', error));
   }
 
   await openOrCreateTodayDaily();
@@ -1248,25 +1468,75 @@ async function initApp() {
   toggleEditMode();
   };
 
-  // Кнопка «Меню»
   const menuBtn = document.getElementById('menuBtn');
+  const menuOverlayEl = document.getElementById('menuOverlay');
+  const calendarOverlayEl = document.getElementById('calendarOverlay');
+  const closeMenuBtn = document.getElementById('closeMenuBtn');
+
+  function closeMenuOverlay() {
+    menuOverlayEl.classList.remove('open');
+    menuOverlayEl.setAttribute('aria-hidden', 'true');
+    menuBtn.title = 'Меню';
+  }
+
+  function openMenuOverlay() {
+    calendarOverlayEl.classList.remove('open');
+    calendarOverlayEl.setAttribute('aria-hidden', 'true');
+
+    menuOverlayEl.classList.add('open');
+    menuOverlayEl.setAttribute('aria-hidden', 'false');
+    menuBtn.title = 'Закрыть меню';
+  }
+
   menuBtn.onclick = () => {
-  drawerEl.classList.toggle('open');
-  const isOpen = drawerEl.classList.contains('open');
-  // Меняем подсказку (tooltip), а не текст кнопки
-  menuBtn.title = isOpen ? 'Закрыть' : 'Меню';
+    if (menuOverlayEl.classList.contains('open')) {
+      closeMenuOverlay();
+    } else {
+      openMenuOverlay();
+    }
   };
 
-  // Кнопка «Календарь» — теперь открывает панель календаря
+  closeMenuBtn.onclick = closeMenuOverlay;
+
+  menuOverlayEl.onclick = (event) => {
+    if (event.target === menuOverlayEl) {
+      closeMenuOverlay();
+    }
+  };
+
   const calendarBtn = document.getElementById('calendarBtn');
-  calendarBtn.onclick = () => {
-    openCalendarPanel();
+
+  calendarBtn.onclick = async () => {
+    closeMenuOverlay();
+
+    calendarOverlayEl.classList.add('open');
+    calendarOverlayEl.setAttribute('aria-hidden', 'false');
+
+    await openCalendarPanel();
   };
 
   // Кнопка «Закрыть» в календаре
   closeCalendarBtnEl.onclick = () => {
     closeCalendarPanel();
   };
+
+  calendarOverlayEl.onclick = (event) => {
+    if (event.target === calendarOverlayEl) {
+      closeCalendarPanel();
+    }
+  };
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+
+    if (menuOverlayEl.classList.contains('open')) {
+      closeMenuOverlay();
+    }
+
+    if (calendarOverlayEl.classList.contains('open')) {
+      closeCalendarPanel();
+    }
+  });
 
   // Остальные обработчики
   document.getElementById('deleteNoteBtn').onclick = deleteCurrentNote;
@@ -1468,9 +1738,12 @@ async function openCalendarPanel() {
   await renderCalendar();
 }
 
-// Закрыть панель календаря
 function closeCalendarPanel() {
+  const calendarOverlayEl = document.getElementById('calendarOverlay');
+
   calendarPanelEl.classList.remove('open');
+  calendarOverlayEl.classList.remove('open');
+  calendarOverlayEl.setAttribute('aria-hidden', 'true');
 }
 
 // Запуск приложения
