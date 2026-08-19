@@ -727,6 +727,174 @@
     #calendarYearSelect {
     flex: 0 1 105px;
     }
+
+    .tagsEditor {
+        flex-shrink: 0;
+        margin-top: 6px;
+    }
+
+    .tagsEditor label {
+        display: block;
+        margin-bottom: 3px;
+        color: var(--muted);
+        font-size: 12px;
+    }
+
+    #tagsInput {
+        width: 100%;
+        color: var(--text);
+    }
+
+    .tagsHint {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 11px;
+    }
+
+    .noteTagsView {
+        display: none;
+        flex-shrink: 0;
+        margin-top: 8px;
+        padding: 6px 0 2px;
+        border-top: 1px solid #eef0f3;
+    }
+
+    .noteTagsView.visible {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+    }
+
+    .noteTag {
+        display: inline-flex;
+        align-items: center;
+        min-height: 26px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: var(--primary);
+        font-size: 12px;
+        cursor: pointer;
+    }
+
+    .noteTag:hover {
+        background: #e0e7ff;
+    }
+
+    #tagsInput:focus {
+        box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
+    }
+
+    .menuSection {
+        margin-bottom: 12px;
+        border-radius: 10px;
+        background: #fff;
+        overflow: hidden;
+    }
+
+    .menuSectionHeader {
+        width: 100%;
+        justify-content: space-between;
+        padding: 9px 10px;
+        background: #eef2ff;
+        color: var(--text);
+        font-weight: 700;
+        text-align: left;
+    }
+
+    .menuSectionHeader:hover {
+        background: #e0e7ff;
+        color: var(--text);
+    }
+
+    .menuSectionChevron {
+        font-size: 18px;
+        line-height: 1;
+        transition: transform 0.15s ease;
+    }
+
+    .menuSection.collapsed .menuSectionChevron {
+        transform: rotate(-90deg);
+    }
+
+    .menuSectionBody {
+        padding: 8px;
+    }
+
+    .menuSection.collapsed .menuSectionBody {
+        display: none;
+    }
+
+    .menuSectionBody #searchInput {
+        margin-top: 0;
+        margin-bottom: 8px;
+    }
+
+    .menuSectionBody .notesList,
+    .menuSectionBody .recentList,
+    .tagsList,
+    .tagPagesList {
+        max-height: 220px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    .tagsList,
+    .tagPagesList {
+        display: grid;
+        gap: 5px;
+    }
+
+    .tagLink,
+    .tagPageLink {
+        width: 100%;
+        justify-content: flex-start;
+        padding: 7px 9px;
+        border-radius: 7px;
+        background: #f9fafb;
+        color: var(--text);
+        text-align: left;
+    }
+
+    .tagLink:hover,
+    .tagPageLink:hover {
+        background: #eef2ff;
+        color: var(--primary);
+    }
+
+    .tagCount {
+        margin-left: auto;
+        color: var(--muted);
+        font-size: 12px;
+    }
+
+    .selectedTagTitle {
+        margin: 8px 0;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .backToTagsBtn {
+        width: 100%;
+        justify-content: flex-start;
+        margin-bottom: 5px;
+        background: #f3f4f6;
+    }
+
+    .noteTagsView {
+        margin-top: auto;
+    }
+
+    @media (max-width: 600px) {
+        .menuSectionBody .notesList,
+        .menuSectionBody .recentList,
+        .tagsList,
+        .tagPagesList {
+            max-height: 180px;
+        }
+    }
   </style>
 </head>
 <body>
@@ -814,9 +982,23 @@
       </button>
     </div>
 
-    <input id="titleInput" type="text" placeholder="Заголовок заметки" />
-    <textarea id="bodyInput" placeholder="Текст заметки (Markdown)..."></textarea>
-    <div id="previewContainer"></div>
+  <input id="titleInput" type="text" placeholder="Заголовок заметки" />
+
+  <div id="tagsEditor" class="tagsEditor">
+      <label for="tagsInput">Теги</label>
+      <input
+              id="tagsInput"
+              type="text"
+              placeholder="например: работа, проект, друг"
+              autocomplete="off"
+      />
+      <div class="tagsHint">Разделяйте теги запятыми</div>
+  </div>
+
+  <textarea id="bodyInput" placeholder="Текст заметки (Markdown)..."></textarea>
+
+  <div id="previewContainer"></div>
+  <div id="noteTagsView" class="noteTagsView" aria-label="Теги заметки"></div>
 
     <!-- Оверлей меню -->
     <div id="menuOverlay" class="panelOverlay" aria-hidden="true">
@@ -832,29 +1014,64 @@
         </div>
 
         <div class="panelModalBody">
-        <div id="drawer" class="drawer">
-            <h3>Недавние</h3>
-            <div id="recentList" class="recentList"></div>
+            <div id="drawer" class="drawer">
+                <section class="menuSection">
+                    <button
+                            id="viewedSectionBtn"
+                            class="menuSectionHeader"
+                            type="button"
+                            aria-expanded="true"
+                    >
+                        <span>Просмотренные</span>
+                        <span class="menuSectionChevron">⌄</span>
+                    </button>
+                    <div id="viewedSectionBody" class="menuSectionBody">
+                        <div id="recentList" class="recentList"></div>
+                    </div>
+                </section>
 
-            <h3 style="margin-top: 12px;">Поиск и все заметки</h3>
-            <input id="searchInput" type="text" placeholder="Поиск по заметкам..." />
-            <div id="notesList" class="notesList"></div>
+                <section class="menuSection">
+                    <button
+                            id="pagesSectionBtn"
+                            class="menuSectionHeader"
+                            type="button"
+                            aria-expanded="true"
+                    >
+                        <span>Страницы</span>
+                        <span class="menuSectionChevron">⌄</span>
+                    </button>
+                    <div id="pagesSectionBody" class="menuSectionBody">
+                        <input
+                                id="searchInput"
+                                type="text"
+                                placeholder="Поиск по страницам..."
+                        />
+                        <div id="notesList" class="notesList"></div>
+                    </div>
+                </section>
 
-            <div class="gamePanel">
-            <div><strong>Игровые механики (заготовка)</strong></div>
-            <div class="row">
-                <span>Очки: <strong id="scoreEl">0</strong></span>
-                <span>Уровень: <strong id="levelEl">1</strong></span>
-                <button id="claimDailyBtn" class="secondary" title="Забрать ежедневный бонус">
-                <svg class="icon" viewBox="0 0 24 24">
-                    <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"></path>
-                    <path d="M4 6v12a2 2 0 0 0 2 2h14v-4"></path>
-                    <path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"></path>
-                </svg>
-                </button>
+                <section class="menuSection">
+                    <button
+                            id="tagsSectionBtn"
+                            class="menuSectionHeader"
+                            type="button"
+                            aria-expanded="true"
+                    >
+                        <span>Теги</span>
+                        <span class="menuSectionChevron">⌄</span>
+                    </button>
+                    <div id="tagsSectionBody" class="menuSectionBody">
+                        <div id="tagsList" class="tagsList"></div>
+                        <div id="tagPagesView" class="tagPagesView" hidden>
+                            <button id="allTagsBtn" class="backToTagsBtn" type="button">
+                                ← Все теги
+                            </button>
+                            <div id="selectedTagTitle" class="selectedTagTitle"></div>
+                            <div id="tagPagesList" class="tagPagesList"></div>
+                        </div>
+                    </div>
+                </section>
             </div>
-            </div>
-        </div>
         </div>
     </section>
     </div>

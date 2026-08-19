@@ -360,6 +360,82 @@ function createSyncId() {
   return crypto.randomUUID();
 }
 
+// =========================
+// Теги заметок
+// =========================
+
+function normalizeTag(tag) {
+  return String(tag || '')
+      .trim()
+      .replace(/^#+/, '')
+      .replace(/\s+/g, ' ')
+      .normalize('NFC')
+      .toLowerCase();
+}
+
+function normalizeTags(tags) {
+  let source = tags;
+
+  if (typeof source === 'string') {
+    source = source.split(',');
+  }
+
+  if (!Array.isArray(source)) {
+    return [];
+  }
+
+  return [...new Set(
+      source
+          .map(normalizeTag)
+          .filter(Boolean)
+  )];
+}
+
+function normalizeNoteTags(note) {
+  return {
+    ...note,
+    tags: normalizeTags(note.tags)
+  };
+}
+
+// =========================
+// Теги заметок
+// =========================
+
+function normalizeTag(tag) {
+  return String(tag || '')
+      .trim()
+      .replace(/^#+/, '')
+      .replace(/\s+/g, ' ')
+      .normalize('NFC')
+      .toLowerCase();
+}
+
+function normalizeTags(tags) {
+  let source = tags;
+
+  if (typeof source === 'string') {
+    source = source.split(',');
+  }
+
+  if (!Array.isArray(source)) {
+    return [];
+  }
+
+  return [...new Set(
+      source
+          .map(normalizeTag)
+          .filter(Boolean)
+  )];
+}
+
+function normalizeNoteTags(note) {
+  return {
+    ...note,
+    tags: normalizeTags(note.tags)
+  };
+}
+
 // Нормализует старую или новую заметку.
 // Старым заметкам без syncId будет выдан новый постоянный идентификатор.
 function normalizeNote(note) {
@@ -367,6 +443,7 @@ function normalizeNote(note) {
 
   return {
     ...note,
+    tags: normalizeTags(note.tags),
     syncId: note.syncId || createSyncId(),
     createdAt: Number(note.createdAt) || now,
     updatedAt: Number(note.updatedAt) || now
@@ -880,9 +957,16 @@ function claimDailyBonus() {
 }
 
 function renderGamePanel() {
+  const scoreEl = document.getElementById('scoreEl');
+  const levelEl = document.getElementById('levelEl');
+
+  // Игровая панель сейчас скрыта из HTML.
+  // Выходим без ошибки, но данные профиля не теряются.
+  if (!scoreEl || !levelEl) return;
+
   const profile = loadGameProfile();
-  document.getElementById('scoreEl').textContent = profile.score;
-  document.getElementById('levelEl').textContent = profile.level;
+  scoreEl.textContent = profile.score;
+  levelEl.textContent = profile.level;
 }
 
 // =========================
@@ -891,6 +975,9 @@ function renderGamePanel() {
 
 const titleInput = document.getElementById('titleInput');
 const bodyInput = document.getElementById('bodyInput');
+const tagsEditorEl = document.getElementById('tagsEditor');
+const tagsInput = document.getElementById('tagsInput');
+const noteTagsViewEl = document.getElementById('noteTagsView');
 const previewContainerEl = document.getElementById('previewContainer');
 const notesListEl = document.getElementById('notesList');
 const searchInput = document.getElementById('searchInput');
@@ -931,6 +1018,8 @@ async function renderNotesList() {
 
   notesListEl.innerHTML = '';
 
+  //renderTagsList();
+
   const filtered = notes.filter((n) => {
     if (!query) return true;
     const title = (n.title || '').toLowerCase();
@@ -942,6 +1031,159 @@ async function renderNotesList() {
     const card = createNoteCardElement(note);
     notesListEl.appendChild(card);
   }
+  renderTagsList();
+}
+
+function getAllTagsWithCounts(notes) {
+  const counts = new Map();
+
+  for (const note of notes) {
+    for (const tag of normalizeTags(note.tags)) {
+      counts.set(tag, (counts.get(tag) || 0) + 1);
+    }
+  }
+
+  return [...counts.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0], 'ru'))
+      .map(([tag, count]) => ({ tag, count }));
+}
+
+async function renderTagsList() {
+  const tagsListEl = document.getElementById('tagsList');
+  if (!tagsListEl) return;
+
+  const notes = await getAllNotes();
+  const tags = getAllTagsWithCounts(notes);
+
+  tagsListEl.innerHTML = '';
+
+  if (tags.length === 0) {
+    tagsListEl.textContent = 'Тегов пока нет.';
+    return;
+  }
+
+  for (const { tag, count } of tags) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'tagLink';
+
+    const nameEl = document.createElement('span');
+    nameEl.textContent = `#${tag}`;
+
+    const countEl = document.createElement('span');
+    countEl.className = 'tagCount';
+    countEl.textContent = `(${count})`;
+
+    button.append(nameEl, countEl);
+    button.addEventListener('click', () => openTagPages(tag));
+
+    tagsListEl.appendChild(button);
+  }
+}
+
+async function openTagPages(tag) {
+  const normalizedTag = normalizeTag(tag);
+  const notes = await getAllNotes();
+
+  const matchingNotes = notes
+      .filter((note) => normalizeTags(note.tags).includes(normalizedTag))
+      .sort((a, b) =>
+          String(a.title || '').localeCompare(String(b.title || ''), 'ru')
+      );
+
+  const tagPagesViewEl = document.getElementById('tagPagesView');
+  const tagsListEl = document.getElementById('tagsList');
+  const selectedTagTitleEl = document.getElementById('selectedTagTitle');
+  const tagPagesListEl = document.getElementById('tagPagesList');
+
+  tagsListEl.hidden = true;
+  tagPagesViewEl.hidden = false;
+  selectedTagTitleEl.textContent =
+      `Страницы с тегом #${normalizedTag} (${matchingNotes.length})`;
+
+  tagPagesListEl.innerHTML = '';
+
+  for (const note of matchingNotes) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'tagPageLink';
+    button.textContent = note.title?.trim() || 'Без названия';
+    button.addEventListener('click', () => {
+      openNote(note);
+      closeMenuOverlay();
+    });
+
+    tagPagesListEl.appendChild(button);
+  }
+}
+
+function closeTagPages() {
+  const tagsListEl = document.getElementById('tagsList');
+  const tagPagesViewEl = document.getElementById('tagPagesView');
+
+  tagsListEl.hidden = false;
+  tagPagesViewEl.hidden = true;
+}
+
+function setupMenuSections() {
+  const sections = [
+    ['viewedSectionBtn', 'viewedSectionBody'],
+    ['pagesSectionBtn', 'pagesSectionBody'],
+    ['tagsSectionBtn', 'tagsSectionBody']
+  ];
+
+  for (const [buttonId, bodyId] of sections) {
+    const button = document.getElementById(buttonId);
+    const body = document.getElementById(bodyId);
+    if (!button || !body) continue;
+
+    button.addEventListener('click', () => {
+      const section = button.closest('.menuSection');
+      const collapsed = section.classList.toggle('collapsed');
+      button.setAttribute('aria-expanded', String(!collapsed));
+    });
+  }
+
+  document.getElementById('allTagsBtn')?.addEventListener(
+      'click',
+      closeTagPages
+  );
+}
+
+function renderNoteTags(note) {
+  noteTagsViewEl.innerHTML = '';
+
+  const tags = normalizeTags(note?.tags);
+
+  if (tags.length === 0) {
+    noteTagsViewEl.classList.remove('visible');
+    return;
+  }
+
+  for (const tag of tags) {
+    const tagEl = document.createElement('button');
+    tagEl.type = 'button';
+    tagEl.className = 'noteTag';
+    tagEl.textContent = `#${tag}`;
+    tagEl.title = `Открыть страницы с тегом #${tag}`;
+
+    tagEl.addEventListener('click', () => {
+      openTagPages(tag);
+    });
+
+    noteTagsViewEl.appendChild(tagEl);
+  }
+
+  noteTagsViewEl.classList.add('visible');
+}
+
+function setTagsEditorVisible(isVisible) {
+  tagsEditorEl.style.display = isVisible ? 'block' : 'none';
+  noteTagsViewEl.style.display = isVisible ? 'none' : '';
+}
+
+function getTagsFromInput() {
+  return normalizeTags(tagsInput.value);
 }
 
 // Открыть заметку в редакторе
@@ -958,8 +1200,12 @@ function openNote(note) {
   currentNoteId = note.id;
   titleInput.value = note.title || '';
   bodyInput.value = note.body || '';
+  tagsInput.value = normalizeTags(note.tags).join(', ');
+
+  renderNoteTags(note);
   
   isEditMode = false;
+  setTagsEditorVisible(false);
   bodyInput.style.display = 'none';
   previewContainerEl.style.display = 'block';
   document.getElementById('editToggleBtn').title = 'Редактировать';
@@ -1060,6 +1306,7 @@ async function renderRecentList() {
 async function saveCurrentNote() {
   const title = titleInput.value.trim();
   const body = bodyInput.value.trim();
+  const tags = getTagsFromInput();
 
   if (!title && !body) {
     alert('Заметка пустая. Введите хотя бы заголовок или текст.');
@@ -1078,6 +1325,7 @@ async function saveCurrentNote() {
       id: currentNoteId,
       title,
       body,
+      tags,
       createdAt: existingNote?.createdAt || now,
       updatedAt: now
     };
@@ -1085,6 +1333,7 @@ async function saveCurrentNote() {
     note = {
       title,
       body,
+      tags, //: [],
       createdAt: now,
       updatedAt: now
     };
@@ -1094,6 +1343,7 @@ async function saveCurrentNote() {
   currentNoteId = savedNote.id;
 
   await renderNotesList();
+  await renderTagsList();
   addScore(10);
   alert('Заметка сохранена!');
 }
@@ -1103,6 +1353,7 @@ async function autoSaveCurrentNote() {
 
   const title = titleInput.value.trim();
   const body = bodyInput.value.trim();
+  const tags = getTagsFromInput();
 
   if (!title && !body) return;
 
@@ -1115,10 +1366,12 @@ async function autoSaveCurrentNote() {
     ...existingNote,
     title,
     body,
+    tags,
     createdAt: existingNote.createdAt,
     updatedAt: Date.now()
   });
 
+  await renderTagsList();
   currentNoteId = savedNote.id;
 }
 
@@ -1372,17 +1625,26 @@ async function toggleEditMode() {
     // Режим редактирования: показываем textarea, скрываем превью
     bodyInput.style.display = 'block';
     previewContainerEl.style.display = 'none';
+    tagsEditorEl.style.display = 'block';
+    noteTagsViewEl.style.display = 'none';
     editToggleBtn.title = 'Просмотр';
     bodyInput.focus();
   } else {
     // Режим просмотра: скрываем textarea, показываем превью
     bodyInput.style.display = 'none';
     previewContainerEl.style.display = 'block';
+    tagsEditorEl.style.display = 'none';
+    noteTagsViewEl.style.display = '';
     editToggleBtn.title = 'Редактировать';
     
     // Сохраняем заметку перед переключением
     await autoSaveCurrentNote();
-    
+
+    renderNoteTags({
+      title: titleInput.value,
+      tags: getTagsFromInput()
+    });
+
     renderPreview(); // обновляем превью
   }
 }
@@ -1392,6 +1654,10 @@ function newNote() {
   currentNoteId = null;
   titleInput.value = '';
   bodyInput.value = '';
+  tagsInput.value = '';
+  noteTagsViewEl.innerHTML = '';
+  noteTagsViewEl.classList.remove('visible');
+  setTagsEditorVisible(true);
   titleInput.focus();
 }
 
@@ -1457,7 +1723,10 @@ async function initApp() {
 
   await openOrCreateTodayDaily();
   await renderNotesList();
-  renderGamePanel();
+  setupMenuSections();
+  await renderTagsList();
+  // Игровая панель временно скрыта из интерфейса.
+  // renderGamePanel();
 
   // Инициализация селекторов календаря
   initCalendarSelectors();
@@ -1540,7 +1809,12 @@ async function initApp() {
 
   // Остальные обработчики
   document.getElementById('deleteNoteBtn').onclick = deleteCurrentNote;
-  document.getElementById('claimDailyBtn').onclick = claimDailyBonus;
+
+  const claimDailyBtn = document.getElementById('claimDailyBtn');
+
+  if (claimDailyBtn) {
+    claimDailyBtn.onclick = claimDailyBonus;
+  }
 
   // Кнопки Назад/Вперёд
   document.getElementById('backBtn').onclick = handleBack;
