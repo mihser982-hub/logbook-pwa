@@ -997,7 +997,9 @@ function createNoteCardElement(note) {
   const h3 = document.createElement('h3');
   h3.textContent = note.title?.trim() || 'Без названия';
   h3.style.cursor = 'pointer';
-  h3.onclick = () => openNote(note);
+  h3.onclick = () => {
+    openNoteFromMenu(note);
+  };
   card.appendChild(h3);
 
 
@@ -1109,8 +1111,7 @@ async function openTagPages(tag) {
     button.className = 'tagPageLink';
     button.textContent = note.title?.trim() || 'Без названия';
     button.addEventListener('click', () => {
-      openNote(note);
-      closeMenuOverlay();
+      openNoteFromMenu(note);
     });
 
     tagPagesListEl.appendChild(button);
@@ -1188,33 +1189,48 @@ function getTagsFromInput() {
 
 // Открыть заметку в редакторе
 function openNote(note) {
-  // Сохраняем текущую заметку в историю
-  if (currentNoteId) {
+  // Сохраняем текущую заметку в историю, только если это другая заметка
+  if (currentNoteId && currentNoteId !== note.id) {
     backHistory.push(currentNoteId);
     if (backHistory.length > MAX_HISTORY) {
       backHistory.shift();
     }
     forwardHistory = []; // Очищаем forward при новом переходе
   }
-  
+
   currentNoteId = note.id;
   titleInput.value = note.title || '';
   bodyInput.value = note.body || '';
   tagsInput.value = normalizeTags(note.tags).join(', ');
 
   renderNoteTags(note);
-  
+
   isEditMode = false;
   setTagsEditorVisible(false);
   bodyInput.style.display = 'none';
   previewContainerEl.style.display = 'block';
   document.getElementById('editToggleBtn').title = 'Редактировать';
-  
+
   renderPreview();
   updateNavButtons();
   renderRecentList();
-  
+
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function openNoteFromMenu(note) {
+  openNote(note);
+
+  const menuOverlayEl = document.getElementById('menuOverlay');
+  if (menuOverlayEl) {
+    menuOverlayEl.classList.remove('open');
+    menuOverlayEl.setAttribute('aria-hidden', 'true');
+
+    const menuBtn = document.getElementById('menuBtn');
+    if (menuBtn) {
+      menuBtn.title = 'Меню';
+    }
+  }
 }
 
 // Обновить состояние кнопок Назад/Вперёд
@@ -1294,9 +1310,9 @@ async function renderRecentList() {
     
     item.appendChild(titleEl);
     item.appendChild(timeEl);
-    
+
     item.onclick = () => {
-      openNote(note);
+      openNoteFromMenu(note);
     };
     
     recentListEl.appendChild(item);
