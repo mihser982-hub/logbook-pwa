@@ -264,11 +264,18 @@ function requestToPromise(request) {
 
 async function loadEncryptionConfig() {
   const record = await requestToPromise(
-    getSettingsStore().get(CRYPTO_SETTINGS_KEY)
+      getSettingsStore().get(CRYPTO_SETTINGS_KEY)
   );
 
   encryptionConfig = record?.value || null;
-  encryptionEnabled = Boolean(encryptionConfig);
+
+  // Не включаем шифрование автоматически, даже если конфиг есть.
+  // encryptionEnabled будет true только после успешного unlockEncryption().
+  if (encryptionConfig) {
+    encryptionEnabled = false; // явно выключаем до ввода пароля
+  } else {
+    encryptionEnabled = false;
+  }
 
   return encryptionConfig;
 }
@@ -482,7 +489,7 @@ function openDB() {
 
 // Получить все заметки
 async function getAllNotes() {
-  return new Promise((resolve, reject) => {
+  const rawNotes = await new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readonly');
     const store = tx.objectStore(STORE_NAME);
     const request = store.getAll();
@@ -490,6 +497,48 @@ async function getAllNotes() {
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
+
+  // Если шифрование выключено или нет ключа, читаем как есть.
+  if (!encryptionEnabled || !masterKey) {
+    return rawNotes;
+  }
+
+  // Шифрование включено и ключ есть — расшифровываем зашифрованные заметки.
+  const result = [];
+
+  for (const note of rawNotes) {
+    if (note.encrypted) {
+      try {
+        const payload = await decryptJson(note.data, masterKey);
+        result.push({
+          id: note.id,
+          syncId: note.syncId,
+          title: payload.title || '',
+          body: payload.body || '',
+          tags: payload.tags || [],
+          createdAt: note.createdAt,
+          updatedAt: note.updatedAt
+        });
+      } catch (err) {
+        console.error('Не удалось расшифровать заметку:', note.id, err);
+        // Добавляем заметку с пометкой об ошибке
+        result.push({
+          id: note.id,
+          syncId: note.syncId,
+          title: '[Ошибка расшифровки]',
+          body: '',
+          tags: [],
+          createdAt: note.createdAt,
+          updatedAt: note.updatedAt
+        });
+      }
+    } else {
+      // Обычная заметка (plain text)
+      result.push(note);
+    }
+  }
+
+  return result;
 }
 
 // Найти заметку по точному заголовку
@@ -502,14 +551,55 @@ async function findNoteByTitle(title) {
 async function saveNote(note) {
   const normalizedNote = normalizeNote(note);
 
+  let record;
+
+  if (encryptionEnabled && masterKey) {
+    // Шифруем title, body, tags
+    const payload = {
+      title: normalizedNote.title || '',
+      body: normalizedNote.body || '',
+      tags: normalizedNote.tags || []
+    };
+
+    const encryptedData = await encryptJson(payload, masterKey);
+
+    // Для существующей заметки сохраняем id, для новой — не указываем
+    record = {
+      syncId: normalizedNote.syncId,
+      encrypted: true,
+      data: encryptedData,
+      createdAt: normalizedNote.createdAt,
+      updatedAt: normalizedNote.updatedAt
+    };
+
+    if (normalizedNote.id != null) {
+      record.id = normalizedNote.id;
+    }
+  } else {
+    // Сохраняем как раньше (plain text)
+    record = {
+      syncId: normalizedNote.syncId,
+      title: normalizedNote.title || '',
+      body: normalizedNote.body || '',
+      tags: normalizedNote.tags || [],
+      createdAt: normalizedNote.createdAt,
+      updatedAt: normalizedNote.updatedAt
+    };
+
+    if (normalizedNote.id != null) {
+      record.id = normalizedNote.id;
+    }
+  }
+
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const store = tx.objectStore(STORE_NAME);
-    const request = store.put(normalizedNote);
+    const request = store.put(record);
 
     request.onsuccess = () => {
+      // request.result — это id (число), присвоенный/подтверждённый IndexedDB
       resolve({
-        ...normalizedNote,
+        ...record,
         id: request.result
       });
     };
@@ -1187,15 +1277,39 @@ function getTagsFromInput() {
   return normalizeTags(tagsInput.value);
 }
 
-// Открыть заметку в редакторе
 function openNote(note) {
-  // Сохраняем текущую заметку в историю, только если это другая заметка
-  if (currentNoteId && currentNoteId !== note.id) {
+  // Если это та же самая заметка, просто выходим (не меняем историю)
+  if (currentNoteId === note.id) {
+    // Обновляем содержимое полей, но не трогаем историю
+    titleInput.value = note.title || '';
+    bodyInput.value = note.body || '';
+    tagsInput.value = normalizeTags(note.tags).join(', ');
+
+    renderNoteTags(note);
+
+    isEditMode = false;
+    setTagsEditorVisible(false);
+    bodyInput.style.display = 'none';
+    previewContainerEl.style.display = 'block';
+    document.getElementById('editToggleBtn').title = 'Редактировать';
+
+    renderPreview();
+    updateNavButtons();
+    renderRecentList();
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+
+  // Это новая заметка — обновляем историю
+  if (currentNoteId != null) {
+    // Удаляем текущий id из истории, если он там уже есть (чтобы не дублировать)
+    backHistory = backHistory.filter(id => id !== currentNoteId);
     backHistory.push(currentNoteId);
     if (backHistory.length > MAX_HISTORY) {
       backHistory.shift();
     }
-    forwardHistory = []; // Очищаем forward при новом переходе
+    forwardHistory = [];
   }
 
   currentNoteId = note.id;
@@ -1716,12 +1830,76 @@ async function openOrCreateTodayDaily() {
   }
 }
 
+async function enableEncryptionWithPassword() {
+  const password = prompt(
+      'Введите пароль для включения шифрования (минимум 12 символов):'
+  );
+  if (!password) return;
+
+  if (password.length < 12) {
+    alert('Пароль должен содержать не менее 12 символов.');
+    return;
+  }
+
+  try {
+    await createEncryptionConfig(password);
+
+    // Загружаем ключ в память
+    const salt = base64ToBytes(encryptionConfig.kdf.salt);
+    masterKey = await deriveMasterKey(password, salt);
+    encryptionEnabled = true;
+
+    alert(
+        'Шифрование включено.\n\n' +
+        'Теперь новые и изменённые заметки будут зашифрованы.\n' +
+        'Старые заметки останутся в незашифрованном виде.'
+    );
+
+    // Перезагружаем страницу, чтобы применить настройки
+    location.reload();
+  } catch (err) {
+    console.error('Ошибка при включении шифрования:', err);
+    alert('Не удалось включить шифрование. Проверьте консоль разработчика.');
+  }
+}
+
 // =========================
 // 5) Инициализация приложения
 // =========================
 
 async function initApp() {
   await openDB();
+
+  await loadEncryptionConfig();
+
+  console.log('encryptionConfig после load:', encryptionConfig);
+  console.log('encryptionEnabled после load:', encryptionEnabled);
+
+  // Если шифрование настроено, запрашиваем пароль один раз
+  if (encryptionConfig && !encryptionEnabled) {
+    const password = prompt(
+        'Шифрование включено.\nВведите пароль для расшифровки заметок:'
+    );
+
+    if (password) {
+      try {
+        await unlockEncryption(password);
+        encryptionEnabled = true;
+        console.log('Шифрование разблокировано, ключ загружен.');
+      } catch (err) {
+        console.error('Ошибка при расшифровке:', err);
+        alert(
+            'Неверный пароль или ошибка расшифровки.\n\n' +
+            'Заметки будут доступны, но зашифрованные заметки не смогут быть прочитаны.'
+        );
+        // Не блокируем работу приложения, просто оставляем encryptionEnabled = false
+      }
+    } else {
+      // Пользователь отменил ввод пароля
+      console.log('Пользователь отменил ввод пароля, шифрование остаётся заблокированным.');
+    }
+  }
+
   await migrateExistingNotesForSync();
 
   if ('serviceWorker' in navigator) {
@@ -1741,6 +1919,13 @@ async function initApp() {
   await renderNotesList();
   setupMenuSections();
   await renderTagsList();
+
+  // Добавляем сегодняшнюю заметку в историю «Просмотренные»
+  if (currentNoteId) {
+    backHistory.push(currentNoteId);
+    renderRecentList();
+  }
+
   // Игровая панель временно скрыта из интерфейса.
   // renderGamePanel();
 
@@ -1855,6 +2040,9 @@ async function initApp() {
   };
 
   searchInput.addEventListener('input', renderNotesList);
+
+  // ВРЕМЕННО: включить шифрование по паролю
+  //await enableEncryptionWithPassword();
 }
 
 // =========================
@@ -1999,7 +2187,15 @@ async function handleCalendarDayClick(day, month, year) {
         updatedAt: now
       };
       const savedNote = await saveNote(newNote);
-      openNote(savedNote);
+
+      // Открываем расшифрованную версию заметки,
+      // чтобы title и body были доступны интерфейсу.
+      openNote({
+        ...newNote,
+        id: savedNote.id,
+        syncId: savedNote.syncId
+      });
+
       closeCalendarPanel();
       // Перерисовываем список заметок и календарь, чтобы увидеть новую заметку
       await renderNotesList();

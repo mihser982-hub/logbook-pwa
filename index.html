@@ -599,16 +599,17 @@
     }
 
     .panelModal {
-    width: min(900px, 100%);
-    max-height: calc(100vh - 20px);
-    margin-top: 0;
-    padding: 12px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    border-radius: 12px;
-    background: var(--card);
-    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+        width: min(900px, 100%);
+        /* Фиксированная максимальная высота */
+        max-height: 70vh;
+        margin-top: 0;
+        padding: 12px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        border-radius: 12px;
+        background: var(--card);
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
     }
 
     .panelModalHeader {
@@ -682,7 +683,7 @@
     }
 
     #menuOverlay .panelModal {
-        max-height: calc(100vh - 44px);
+        max-height: 70vh;
         margin-top: 0;
     }
     }
