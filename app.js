@@ -758,45 +758,25 @@ async function importBackupFromFile(file) {
   if (!confirmed) return;
 
   const existingNotes = await getAllNotes();
-  const existingByTitle = new Map(
-    existingNotes.map((note) => [note.title || '', note])
-  );
+  const existingUpdatedAt = Number(existingNote.updatedAt) || 0;
 
-  let added = 0;
-  let updated = 0;
-  let skipped = 0;
+  // Не перезаписываем непустую заметку пустой из бэкапа
+  const incomingBody = incomingNote.body || '';
+  const existingBody = existingNote.body || '';
 
-  for (const incomingNote of incomingNotes) {
-    const titleKey = incomingNote.title || '';
-    const existingNote = existingByTitle.get(titleKey);
-
-    //const incomingUpdatedAt = Number(incomingNote.updatedAt || 0);
-
-    if (!existingNote) {
-      // ID не переносим: каждая IndexedDB создаёт свой числовой ID.
-      const { id, ...noteWithoutId } = incomingNote;
-
-      await saveNote({
-        ...noteWithoutId,
-        createdAt: noteWithoutId.createdAt || Date.now(),
-        updatedAt: noteWithoutId.updatedAt || Date.now()
-      });
-
-      added++;
-      continue;
-    }
-
-    const existingUpdatedAt = Number(existingNote.updatedAt || 0);
-
-   await saveNote({
-      ...incomingNote,
-      id: existingNote.id,
-      createdAt: existingNote.createdAt || incomingNote.createdAt || Date.now(),
-      updatedAt: incomingNote.updatedAt || Date.now()
-    });
-
-    updated++;
+  if (incomingBody.trim() === '' && existingBody.trim() !== '') {
+    // пропускаем такую заметку, оставляем локальную
+    skipped++;
+    continue;
   }
+
+  await saveNote({
+    ...incomingNote,
+    id: existingNote.id,
+    createdAt: existingNote.createdAt,
+    updatedAt: incomingNote.updatedAt || Date.now()
+  });
+  updated++;
 
   await renderNotesList();
   await renderRecentList();
