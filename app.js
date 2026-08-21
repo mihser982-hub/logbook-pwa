@@ -793,26 +793,29 @@ async function importBackupFromFile(file) {
   await renderNotesList();
   await renderRecentList();
 
-  const notesAfterImport = await getAllNotes();
-  const todayTitle = getTodayDailyTitle();
+// Обновляем текущую открытую заметку, если её заголовок совпадает
+// с одной из импортированных заметок
+  if (currentNoteId) {
+    const notesAfterImport = await getAllNotes();
+    const currentNote = notesAfterImport.find(n => n.id === currentNoteId);
 
-  const todayNoteAfterImport = notesAfterImport.find(
-    (note) => note.title === todayTitle
-  );
+    if (currentNote) {
+      const importedWithSameTitle = incomingNotes.find(
+          n => (n.title || '') === (currentNote.title || '')
+      );
 
-  if (todayNoteAfterImport) {
-    currentNoteId = null;
-    openNote(todayNoteAfterImport);
-  } else if (currentNoteId) {
-    const currentNoteAfterImport = notesAfterImport.find(
-      (note) => note.id === currentNoteId
-    );
-
-    if (currentNoteAfterImport) {
-      currentNoteId = null;
-      openNote(currentNoteAfterImport);
+      if (importedWithSameTitle) {
+        openNote(currentNote);
+      }
     }
   }
+
+  alert(
+      'Импорт завершён.\n\n' +
+      `Добавлено: ${added}\n` +
+      `Обновлено: ${updated}\n` +
+      `Без изменений: ${skipped}`
+  );
 
   alert(
     'Импорт завершён.\n\n' +
