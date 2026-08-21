@@ -1834,6 +1834,45 @@ async function openOrCreateTodayDaily() {
 }
 
 async function enableEncryptionWithPassword() {
+  async function enableEncryptionWithPassword() {
+    // Если шифрование уже настроено, выходим сразу
+    if (encryptionConfig) {
+      console.log('Шифрование уже настроено, пропускаем enableEncryptionWithPassword');
+      return;
+    }
+
+    const password = prompt(
+        'Введите пароль для включения шифрования (минимум 12 символов):'
+    );
+    if (!password) return;
+
+    if (password.length < 12) {
+      alert('Пароль должен содержать не менее 12 символов.');
+      return;
+    }
+
+    try {
+      await createEncryptionConfig(password);
+
+      // Загружаем ключ в память
+      const salt = base64ToBytes(encryptionConfig.kdf.salt);
+      masterKey = await deriveMasterKey(password, salt);
+      encryptionEnabled = true;
+
+      alert(
+          'Шифрование включено.\n\n' +
+          'Теперь новые и изменённые заметки будут зашифрованы.\n' +
+          'Старые заметки останутся в незашифрованном виде.'
+      );
+
+      // Перезагружаем страницу, чтобы применить настройки
+      location.reload();
+    } catch (err) {
+      console.error('Ошибка при включении шифрования:', err);
+      alert('Не удалось включить шифрование. Проверьте консоль разработчика.');
+    }
+  }
+
   const password = prompt(
       'Введите пароль для включения шифрования (минимум 12 символов):'
   );
@@ -2044,8 +2083,12 @@ async function initApp() {
 
   searchInput.addEventListener('input', renderNotesList);
 
+  console.log('Перед вызовом enableEncryptionWithPassword');
+
   // ВРЕМЕННО: включить шифрование по паролю
   await enableEncryptionWithPassword();
+
+  console.log('После вызова enableEncryptionWithPassword');
 }
 
 // =========================
