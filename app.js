@@ -2062,12 +2062,8 @@ async function initApp() {
 
   searchInput.addEventListener('input', renderNotesList);
 
-  console.log('Перед вызовом enableEncryptionWithPassword');
-
   // ВРЕМЕННО: включить шифрование по паролю
-  await enableEncryptionWithPassword();
-
-  console.log('После вызова enableEncryptionWithPassword');
+  //await enableEncryptionWithPassword();
 }
 
 // =========================
