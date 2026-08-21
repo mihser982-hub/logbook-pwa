@@ -1725,10 +1725,8 @@ async function handleInternalLinkClick(noteTitle) {
   const note = await findNoteByTitle(noteTitle);
 
   if (note) {
-    // Если заметка есть — открываем её
     openNote(note);
   } else {
-    // Если заметки нет — спрашиваем, создать ли
     const ok = confirm(`Создать заметку "${noteTitle}"?`);
     if (ok) {
       const now = Date.now();
@@ -1738,8 +1736,16 @@ async function handleInternalLinkClick(noteTitle) {
         createdAt: now,
         updatedAt: now
       };
+
       const savedNote = await saveNote(newNote);
-      openNote(savedNote);
+
+      // Открываем заметку с правильным title
+      openNote({
+        ...newNote,
+        id: savedNote.id,
+        syncId: savedNote.syncId
+      });
+
       await renderNotesList();
       addScore(10);
     }
