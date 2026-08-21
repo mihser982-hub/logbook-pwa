@@ -18,6 +18,8 @@ const MAX_HISTORY = 10;
 let backHistory = [];
 let forwardHistory = [];
 
+let appLocked = false;
+
 // =========================
 // 0.1) Вспомогательные функции для календаря
 // =========================
@@ -500,6 +502,12 @@ async function getAllNotes() {
 
   // Если шифрование выключено или нет ключа, читаем как есть.
   if (!encryptionEnabled || !masterKey) {
+    const hasEncryptedNotes = rawNotes.some((note) => note.encrypted === true);
+
+    if (hasEncryptedNotes) {
+      throw new Error('Заметки заблокированы: требуется пароль.');
+    }
+
     return rawNotes;
   }
 
@@ -1902,29 +1910,60 @@ async function initApp() {
   console.log('encryptionConfig после load:', encryptionConfig);
   console.log('encryptionEnabled после load:', encryptionEnabled);
 
-  // Если шифрование настроено, запрашиваем пароль один раз
-  if (encryptionConfig && !encryptionEnabled) {
-    const password = prompt(
-        'Шифрование включено.\nВведите пароль для расшифровки заметок:'
-    );
+  // Если шифрование настроено, запрашиваем пароль и блокируем приложение до успешного ввода
+  if (encryptionConfig) {
+    // Пробуем ввести пароль, пока не получится или пользователь не отменит
+    let unlocked = false;
 
-    if (password) {
+    while (!unlocked) {
+      const password = prompt(
+          'Шифрование включено.\nВведите пароль для расшифровки заметок:\n(нажмите Отмена, чтобы закрыть приложение)'
+      );
+
+      if (!password) {
+        // Пользователь нажал Отмена — оставляем приложение заблокированным
+        appLocked = true;
+        alert('Приложение заблокировано. Перезагрузите страницу, чтобы ввести пароль.');
+        break; // выходим из цикла, appLocked = true
+      }
+
       try {
         await unlockEncryption(password);
         encryptionEnabled = true;
+        unlocked = true;
+        appLocked = false;
         console.log('Шифрование разблокировано, ключ загружен.');
       } catch (err) {
         console.error('Ошибка при расшифровке:', err);
-        alert(
-            'Неверный пароль или ошибка расшифровки.\n\n' +
-            'Заметки будут доступны, но зашифрованные заметки не смогут быть прочитаны.'
-        );
-        // Не блокируем работу приложения, просто оставляем encryptionEnabled = false
+        alert('Неверный пароль. Попробуйте ещё раз.');
+        // цикл продолжится, appLocked остаётся true
       }
-    } else {
-      // Пользователь отменил ввод пароля
-      console.log('Пользователь отменил ввод пароля, шифрование остаётся заблокированным.');
     }
+  } else {
+    // Шифрование не настроено
+    appLocked = false;
+  }
+
+  // Не продолжаем инициализацию без успешного пароля
+  if (appLocked) {
+    document.body.innerHTML = `
+    <div style="
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      height:100vh;
+      font-family:system-ui, sans-serif;
+      text-align:center;
+      padding:20px;
+    ">
+      <div>
+        <h1>Приложение заблокировано</h1>
+        <p>Для доступа к заметкам перезагрузите страницу и введите пароль.</p>
+      </div>
+    </div>
+  `;
+
+    return;
   }
 
   await migrateExistingNotesForSync();
