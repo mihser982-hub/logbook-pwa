@@ -5,10 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>LogBook</title>
 
-  <!-- link rel="manifest" href="manifest.json" / -->
-
   <link rel="manifest" href="./manifest.json">
-  
+
   <meta name="theme-color" content="#4f46e5" />
   <link rel="icon" href="icon-192.png" />
 
@@ -31,9 +29,9 @@
       background: var(--bg);
       color: var(--text);
       line-height: 1.5;
-      padding: 0; /* Убираем padding у body */
-      height: 100vh; /* На всю высоту */
-      overflow: hidden; /* Чтобы не было прокрутки страницы */
+      padding: 0;
+      height: 100vh;
+      overflow: hidden;
     }
 
     .app {
@@ -42,7 +40,7 @@
       background: var(--card);
       box-shadow: 0 10px 30px rgba(0,0,0,0.06);
       padding: 12px;
-      height: 100vh; /* На всю высоту */
+      height: 100vh;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -52,9 +50,9 @@
       display: flex;
       gap: 6px;
       align-items: center;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       margin-bottom: 10px;
-      flex-shrink: 0; /* Не сжимать */
+      flex-shrink: 0;
     }
 
     .logo {
@@ -62,35 +60,35 @@
       font-size: 18px;
       margin-right: auto;
       color: var(--text);
+      white-space: nowrap;
     }
 
     input, textarea, button {
-    font: inherit;
-    padding: 6px 8px;
-    border-radius: 8px;
-    border: none; /* Убираем рамку */
-    outline: none;
-    background: #f9fafb; /* Лёгкий фон */
+      font: inherit;
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      background: #f9fafb;
     }
 
     input:focus, textarea:focus {
-    border: none;
-    box-shadow: 0 0 0 2px rgba(79,70,229,0.15); /* Только свечение при фокусе */
+      border: none;
+      box-shadow: 0 0 0 2px rgba(79,70,229,0.15);
     }
 
-    #titleInput { 
-    width: 100%; 
-    flex-shrink: 0;
-    font-weight: 700;
+    #titleInput {
+      width: 100%;
+      flex-shrink: 0;
+      font-weight: 700;
     }
 
-    /* Поле редактирования и превью на всю высоту */
     #bodyInput, #previewContainer {
       width: 100%;
-      flex: 1; /* Занимать всё доступное место */
+      flex: 1;
       resize: none;
       margin-top: 8px;
-      overflow-y: auto; /* Прокрутка внутри */
+      overflow-y: auto;
     }
 
     #bodyInput {
@@ -99,15 +97,14 @@
     }
 
     #previewContainer {
-    background: #fff;
-    border: none; /* Убираем рамку */
-    border-radius: 8px;
-    padding: 10px;
-    line-height: 1.6;
-    display: block;
+      background: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px;
+      line-height: 1.6;
+      display: block;
     }
 
-    /* Стили для Markdown-элементов */
     #previewContainer h1,
     #previewContainer h2,
     #previewContainer h3,
@@ -125,17 +122,9 @@
     #previewContainer h3 { font-size: 1.3em; }
     #previewContainer h4 { font-size: 1.1em; }
 
-    #previewContainer p {
-      margin-bottom: 0.8em;
-    }
-
-    #previewContainer strong {
-      font-weight: 600;
-    }
-
-    #previewContainer em {
-      font-style: italic;
-    }
+    #previewContainer p { margin-bottom: 0.8em; }
+    #previewContainer strong { font-weight: 600; }
+    #previewContainer em { font-style: italic; }
 
     #previewContainer ul,
     #previewContainer ol {
@@ -143,9 +132,7 @@
       margin-bottom: 0.8em;
     }
 
-    #previewContainer li {
-      margin-bottom: 0.3em;
-    }
+    #previewContainer li { margin-bottom: 0.3em; }
 
     #previewContainer code {
       background: #f3f4f6;
@@ -196,9 +183,7 @@
       font-weight: 600;
     }
 
-    #previewContainer input[type="checkbox"] {
-      margin-right: 6px;
-    }
+    #previewContainer input[type="checkbox"] { margin-right: 6px; }
 
     #previewContainer .footnote-ref {
       font-size: 0.8em;
@@ -220,14 +205,9 @@
       cursor: pointer;
     }
 
-    #previewContainer a.internal-link:hover {
-      color: var(--danger);
-    }
+    #previewContainer a.internal-link:hover { color: var(--danger); }
 
-    /* Стили для сворачиваемых заголовков */
-    #previewContainer .foldable-heading {
-      cursor: pointer;
-    }
+    #previewContainer .foldable-heading { cursor: pointer; }
 
     #previewContainer .foldable-heading.collapsed::after {
       content: ' ...';
@@ -235,23 +215,22 @@
       margin-left: 8px;
     }
 
-    /* Кнопки */
     button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    background: #f3f4f6;
-    color: var(--icon-color);
-    border: none; /* Убираем рамку */
-    cursor: pointer;
-    padding: 6px 8px;
-    border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: #f3f4f6;
+      color: var(--icon-color);
+      border: none;
+      cursor: pointer;
+      padding: 6px 8px;
+      border-radius: 8px;
     }
 
     button:hover {
-    background: #e5e7eb; /* Подсветка при наведении */
-    color: var(--primary);
+      background: #e5e7eb;
+      color: var(--primary);
     }
 
     button:disabled {
@@ -259,21 +238,14 @@
       cursor: not-allowed;
     }
 
-    button.secondary {
-      background: #eef2ff;
-      border-color: #c7d2fe;
-    }
+    button.secondary { background: #eef2ff; }
 
     button.danger {
       background: #fee2e2;
-      border-color: #fecaca;
       color: #b91c1c;
     }
 
-    button.danger:hover {
-      border-color: var(--danger);
-      color: var(--danger);
-    }
+    button.danger:hover { color: var(--danger); }
 
     .icon {
       width: 18px;
@@ -286,106 +258,52 @@
     }
 
     .drawer {
-    margin-top: 12px;
-    padding: 10px;
-    background: #f9fafb;
-    border: none; /* Убираем рамку */
-    border-radius: 10px;
-    display: none;
-    overflow-y: auto;
-    flex-shrink: 0;
+      margin-top: 12px;
+      padding: 10px;
+      background: #f9fafb;
+      border: none;
+      border-radius: 10px;
+      display: none;
+      overflow-y: auto;
+      flex-shrink: 0;
     }
 
-    .drawer.open {
-      display: block;
-    }
-
-    .drawer h3 {
-      font-size: 14px;
-      margin-bottom: 8px;
-      color: var(--muted);
-    }
-
-    .drawer .row {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
+    .drawer.open { display: block; }
 
     #searchInput {
-    width: 100%;
-    margin-top: 8px;
+      width: 100%;
+      margin-top: 8px;
     }
 
     .notesList {
       margin-top: 10px;
       display: grid;
-      gap: 8px;
+      gap: 6px;
     }
 
     .noteCard {
-    background: #fff;
-    border: none; /* Убираем рамку */
-    border-radius: 10px;
-    padding: 8px 10px;
-    display: grid;
-    gap: 4px;
+      background: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 8px 10px;
     }
 
-    .noteCard:hover {
-    background: #f9fafb; /* Лёгкая подсветка при наведении */
-    }
+    .noteCard:hover { background: #f9fafb; }
 
     .noteCard h3 {
       font-size: 15px;
       margin: 0;
+      font-weight: 400;
     }
 
-    .noteCard .meta {
-      font-size: 11px;
-      color: var(--muted);
-    }
-
-    .noteCard .actions {
-      display: flex;
-      gap: 6px;
-      margin-top: 4px;
-    }
-
-    .noteCard .actions button {
-      padding: 4px 8px;
-      font-size: 12px;
-    }
-
-    .gamePanel {
-      margin-top: 12px;
-      padding: 8px 10px;
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      border-radius: 10px;
-      font-size: 13px;
-    }
-
-    .gamePanel .row {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-      margin-top: 4px;
-    }
+    .noteCard .meta,
+    .recentItem .time { display: none; }
 
     .calendarPanel {
-    margin-top: 12px;
-    padding: 10px;
-    background: #f9fafb;
-    border: none; /* Убираем рамку */
-    border-radius: 10px;
-    display: none;
-    flex-shrink: 0;
-    }
-
-    .calendarPanel.open {
+      margin-top: 0;
+      padding: 0;
+      background: transparent;
+      border: none;
       display: block;
     }
 
@@ -437,7 +355,6 @@
       padding: 4px 0;
     }
 
-    /* Стили для списка «Недавние» */
     .recentList {
       margin-top: 10px;
       display: grid;
@@ -445,472 +362,424 @@
     }
 
     .recentItem {
-    background: #fff;
-    border: none; /* Убираем рамку */
-    border-radius: 8px;
-    padding: 6px 8px;
-    font-size: 13px;
-    cursor: pointer;
+      background: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 8px;
+      font-size: 13px;
+      cursor: pointer;
     }
 
-    .recentItem:hover {
-    background: #eef2ff; /* Подсветка при наведении */
-    }
+    .recentItem:hover { background: #eef2ff; }
 
     .recentItem .title {
       font-weight: 600;
-      margin-bottom: 2px;
-    }
-
-    .recentItem .time {
-      font-size: 11px;
-      color: var(--muted);
-    }
-
-    /* Адаптация под мобильные */
-    @media (max-width: 600px) {
-      body {
-        padding: 0;
-      }
-
-      .app {
-        padding: 10px;
-      }
-
-      .logo {
-        font-size: 16px;
-      }
-
-      #previewContainer {
-        font-size: 15px;
-      }
-
-      #previewContainer table {
-        font-size: 0.85em;
-      }
+      margin-bottom: 0;
     }
 
     .task-checkbox {
-    appearance: none;
-    width: 18px;
-    height: 18px;
-    margin: 0 7px 0 0;
-    padding: 0;
-    border: 0;
-    border-radius: 50%;
-    background: #9aa0a6;
-    vertical-align: -4px;
-    cursor: pointer;
-    position: relative;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      margin: 0 7px 0 0;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: #9aa0a6;
+      vertical-align: -4px;
+      cursor: pointer;
+      position: relative;
     }
 
     .task-checkbox::after {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    color: white;
-    font-size: 12px;
-    font-weight: 700;
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: white;
+      font-size: 12px;
+      font-weight: 700;
     }
 
-    .task-checkbox[data-state="backlog"]::after {
-    content: '◌';
-    }
+    .task-checkbox[data-state="backlog"]::after { content: "\25CC"; }
+    .task-checkbox[data-state="todo"]::after { content: ""; }
+    .task-checkbox[data-state="doing"]::after { content: "\25D0"; }
+    .task-checkbox[data-state="review"]::after { content: "\2691"; }
+    .task-checkbox[data-state="done"]::after { content: "\2713"; }
+    .task-checkbox[data-state="cancelled"]::after { content: "\00D7"; }
 
-    .task-checkbox[data-state="todo"]::after {
-    content: '';
-    }
+    .task-checkbox[data-state="backlog"] { background: #94a3b8; }
+    .task-checkbox[data-state="todo"] { background: #64748b; }
+    .task-checkbox[data-state="doing"] { background: #3b82f6; }
+    .task-checkbox[data-state="review"] { background: #f59e0b; }
+    .task-checkbox[data-state="done"] { background: #22c55e; }
+    .task-checkbox[data-state="cancelled"] { background: #ef4444; }
 
-    .task-checkbox[data-state="doing"]::after {
-    content: '◐';
-    }
-
-    .task-checkbox[data-state="review"]::after {
-    content: '⚑';
-    }
-
-    .task-checkbox[data-state="done"]::after {
-    content: '✓';
-    }
-
-    .task-checkbox[data-state="cancelled"]::after {
-    content: '×';
-    }
-
-    /* Цвета статусов задач */
-    .task-checkbox[data-state="backlog"] {
-    background: #94a3b8; /* серо-синий */
-    }
-
-    .task-checkbox[data-state="todo"] {
-    background: #64748b; /* серый */
-    }
-
-    .task-checkbox[data-state="doing"] {
-    background: #3b82f6; /* синий */
-    }
-
-    .task-checkbox[data-state="review"] {
-    background: #f59e0b; /* оранжевый */
-    }
-
-    .task-checkbox[data-state="done"] {
-    background: #22c55e; /* зелёный */
-    }
-
-    .task-checkbox[data-state="cancelled"] {
-    background: #ef4444; /* красный */
-    }
-
-    .task-checkbox:hover {
-    filter: brightness(0.88);
-    }
+    .task-checkbox:hover { filter: brightness(0.88); }
 
     .task-text-done,
     .task-text-cancelled {
-    color: var(--muted);
-    text-decoration: line-through;
+      color: var(--muted);
+      text-decoration: line-through;
     }
 
-    /* Моноширинный шрифт только в режиме редактирования */
     #bodyInput {
-    font-family: ui-monospace, SFMono-Regular, Consolas,
-        "Liberation Mono", Menlo, Monaco, "Courier New", monospace;
-    font-size: 15px;
-    line-height: 1.65;
-    tab-size: 2;
+      font-family: ui-monospace, SFMono-Regular, Consolas,
+          "Liberation Mono", Menlo, Monaco, "Courier New", monospace;
+      font-size: 15px;
+      line-height: 1.65;
+      tab-size: 2;
     }
 
-    /* Модальные панели поверх заметки */
     .panelOverlay {
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-    display: none;
-    background: rgba(17, 24, 39, 0.35);
-    padding: 10px;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: none;
+      background: rgba(17, 24, 39, 0.35);
+      padding: 10px;
     }
 
     .panelOverlay.open {
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
     }
 
     .panelModal {
-        width: min(900px, 100%);
-        /* Фиксированная максимальная высота */
-        max-height: 70vh;
-        margin-top: 0;
-        padding: 12px;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        border-radius: 12px;
-        background: var(--card);
-        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+      width: min(900px, 100%);
+      max-height: 70vh;
+      margin-top: 0;
+      padding: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      border-radius: 12px;
+      background: var(--card);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
     }
 
     .panelModalHeader {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-    margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+      margin-bottom: 10px;
     }
 
     .panelModalTitle {
-    margin-right: auto;
-    font-size: 16px;
-    font-weight: 700;
+      margin-right: auto;
+      font-size: 16px;
+      font-weight: 700;
     }
 
-    .panelModalClose {
-    flex: 0 0 auto;
+    .menuToolbar {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+      margin-bottom: 10px;
     }
+
+    .menuToolbar button {
+      min-width: 36px;
+    }
+
+    .panelModalClose { flex: 0 0 auto; }
 
     .panelModalBody {
-    min-height: 0;
-    overflow-y: auto;
-    }
-
-    /* В overlay панели больше не участвуют в обычной раскладке */
-    .panelModal .drawer,
-    .panelModal .calendarPanel {
-    display: block;
-    margin: 0;
-    padding: 0;
-    border-radius: 0;
-    background: transparent;
-    overflow: visible;
-    }
-
-    /* Когда панель перенесена в модальное окно, штатный класс open не нужен */
-    .panelModal .drawer.open,
-    .panelModal .calendarPanel.open {
-    display: block;
+      min-height: 0;
+      overflow-y: auto;
     }
 
     #calendarOverlay .panelModal {
-    max-width: 420px;
+      max-width: 420px;
     }
 
-    @media (max-width: 600px) {
-    .panelOverlay {
-        padding: 14px 10px;
-    }
-
-    .panelOverlay.open {
-        align-items: flex-start;
-    }
-
-    .panelModal {
-        width: 100%;
-        max-width: 520px;
-        max-height: calc(100vh - 28px);
-        margin-top: 18px;
-        border-radius: 14px;
-        padding: 12px 10px;
-    }
-    }
-
-    /* Меню: равные отступы сверху и снизу на телефоне */
-    @media (max-width: 600px) {
-    #menuOverlay {
-        padding-top: 22px;
-        padding-bottom: 22px;
-    }
-
-    #menuOverlay .panelModal {
-        max-height: 70vh;
-        margin-top: 0;
-    }
-    }
-
-    /* Селекторы месяца и года в календаре */
     .calendarHeader select {
-    appearance: none;
-    -webkit-appearance: none;
-    min-height: 36px;
-    padding: 7px 34px 7px 10px;
-    border: 1px solid #dbe1ea;
-    border-radius: 10px;
-    background-color: #fff;
-    color: var(--text);
-    font-weight: 600;
-    cursor: pointer;
-    background-image:
-        linear-gradient(45deg, transparent 50%, var(--muted) 50%),
-        linear-gradient(135deg, var(--muted) 50%, transparent 50%);
-    background-position:
-        calc(100% - 15px) 15px,
-        calc(100% - 10px) 15px;
-    background-size: 5px 5px, 5px 5px;
-    background-repeat: no-repeat;
+      appearance: none;
+      -webkit-appearance: none;
+      min-height: 36px;
+      padding: 7px 34px 7px 10px;
+      border: 1px solid #dbe1ea;
+      border-radius: 10px;
+      background-color: #fff;
+      color: var(--text);
+      font-weight: 600;
+      cursor: pointer;
+      background-image:
+          linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+          linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+      background-position:
+          calc(100% - 15px) 15px,
+          calc(100% - 10px) 15px;
+      background-size: 5px 5px, 5px 5px;
+      background-repeat: no-repeat;
     }
 
     .calendarHeader select:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.14);
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.14);
     }
 
     .calendarHeader select:hover {
-    border-color: #b9c2d0;
-    background-color: #f9fafb;
+      border-color: #b9c2d0;
+      background-color: #f9fafb;
     }
 
-    #calendarMonthSelect {
-    flex: 1 1 170px;
-    }
-
-    #calendarYearSelect {
-    flex: 0 1 105px;
-    }
+    #calendarMonthSelect { flex: 1 1 170px; }
+    #calendarYearSelect { flex: 0 1 105px; }
 
     .tagsEditor {
-        flex-shrink: 0;
-        margin-top: 6px;
+      flex-shrink: 0;
+      margin-top: 6px;
     }
 
     .tagsEditor label {
-        display: block;
-        margin-bottom: 3px;
-        color: var(--muted);
-        font-size: 12px;
+      display: block;
+      margin-bottom: 3px;
+      color: var(--muted);
+      font-size: 12px;
     }
 
     #tagsInput {
-        width: 100%;
-        color: var(--text);
+      width: 100%;
+      color: var(--text);
     }
 
     .tagsHint {
-        margin-top: 2px;
-        color: var(--muted);
-        font-size: 11px;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 11px;
     }
 
     .noteTagsView {
-        display: none;
-        flex-shrink: 0;
-        margin-top: 8px;
-        padding: 6px 0 2px;
-        border-top: 1px solid #eef0f3;
+      display: none;
+      flex-shrink: 0;
+      margin-top: auto;
+      padding: 6px 0 2px;
+      border-top: 1px solid #eef0f3;
     }
 
     .noteTagsView.visible {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
     }
 
     .noteTag {
-        display: inline-flex;
-        align-items: center;
-        min-height: 26px;
-        padding: 3px 9px;
-        border-radius: 999px;
-        background: #eef2ff;
-        color: var(--primary);
-        font-size: 12px;
-        cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: var(--primary);
+      font-size: 12px;
+      cursor: pointer;
     }
 
-    .noteTag:hover {
-        background: #e0e7ff;
-    }
-
-    #tagsInput:focus {
-        box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
-    }
+    .noteTag:hover { background: #e0e7ff; }
 
     .menuSection {
-        margin-bottom: 12px;
-        border-radius: 10px;
-        background: #fff;
-        overflow: hidden;
+      margin-bottom: 12px;
+      border-radius: 10px;
+      background: #fff;
+      overflow: hidden;
     }
 
     .menuSectionHeader {
-        width: 100%;
-        justify-content: space-between;
-        padding: 9px 10px;
-        background: #eef2ff;
-        color: var(--text);
-        font-weight: 700;
-        text-align: left;
+      width: 100%;
+      justify-content: space-between;
+      padding: 9px 10px;
+      background: #eef2ff;
+      color: var(--text);
+      font-weight: 700;
+      text-align: left;
     }
 
     .menuSectionHeader:hover {
-        background: #e0e7ff;
-        color: var(--text);
+      background: #e0e7ff;
+      color: var(--text);
     }
 
     .menuSectionChevron {
-        font-size: 18px;
-        line-height: 1;
-        transition: transform 0.15s ease;
+      font-size: 18px;
+      line-height: 1;
+      transition: transform 0.15s ease;
     }
 
     .menuSection.collapsed .menuSectionChevron {
-        transform: rotate(-90deg);
+      transform: rotate(-90deg);
     }
 
-    .menuSectionBody {
-        padding: 8px;
-    }
-
-    .menuSection.collapsed .menuSectionBody {
-        display: none;
-    }
+    .menuSectionBody { padding: 8px; }
+    .menuSection.collapsed .menuSectionBody { display: none; }
 
     .menuSectionBody #searchInput {
-        margin-top: 0;
-        margin-bottom: 8px;
+      margin-top: 0;
+      margin-bottom: 8px;
     }
 
     .menuSectionBody .notesList,
     .menuSectionBody .recentList,
     .tagsList,
     .tagPagesList {
-        max-height: 220px;
-        overflow-y: auto;
-        overscroll-behavior: contain;
+      max-height: 220px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
     }
 
     .tagsList,
     .tagPagesList {
-        display: grid;
-        gap: 5px;
+      display: grid;
+      gap: 5px;
     }
 
     .tagLink,
     .tagPageLink {
-        width: 100%;
-        justify-content: flex-start;
-        padding: 7px 9px;
-        border-radius: 7px;
-        background: #f9fafb;
-        color: var(--text);
-        text-align: left;
+      width: 100%;
+      justify-content: flex-start;
+      padding: 7px 9px;
+      border-radius: 7px;
+      background: #f9fafb;
+      color: var(--text);
+      text-align: left;
     }
 
     .tagLink:hover,
     .tagPageLink:hover {
-        background: #eef2ff;
-        color: var(--primary);
+      background: #eef2ff;
+      color: var(--primary);
     }
 
     .tagCount {
-        margin-left: auto;
-        color: var(--muted);
-        font-size: 12px;
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 12px;
     }
 
     .selectedTagTitle {
-        margin: 8px 0;
-        color: var(--muted);
-        font-size: 13px;
-        font-weight: 600;
+      margin: 8px 0;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
     }
 
     .backToTagsBtn {
-        width: 100%;
-        justify-content: flex-start;
-        margin-bottom: 5px;
-        background: #f3f4f6;
+      width: 100%;
+      justify-content: flex-start;
+      margin-bottom: 5px;
+      background: #f3f4f6;
     }
 
-    .noteTagsView {
-        margin-top: auto;
+    .settingsSection {
+      margin-bottom: 16px;
+      padding: 12px;
+      background: #f9fafb;
+      border-radius: 10px;
+    }
+
+    .settingsSection h3 {
+      font-size: 14px;
+      margin-bottom: 10px;
+      color: var(--muted);
+    }
+
+    .settingsCheckbox {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    .settingsLabel {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .settingsInput {
+      width: 100%;
+      margin-top: 4px;
+      padding: 8px;
+    }
+
+    .settingsBtn {
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .settingsBtn:hover {
+      background: #4338ca;
+      color: #fff;
+    }
+
+    .passwordSection {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #e5e7eb;
     }
 
     @media (max-width: 600px) {
-        .menuSectionBody .notesList,
-        .menuSectionBody .recentList,
-        .tagsList,
-        .tagPagesList {
-            max-height: 180px;
-        }
+      .app { padding: 10px; }
+      .logo { font-size: 16px; }
+
+      .toolbar { gap: 4px; }
+
+      .toolbar button,
+      .menuToolbar button {
+        padding: 6px;
+        min-width: 36px;
+      }
+
+      #previewContainer { font-size: 15px; }
+
+      .panelOverlay { padding: 14px 10px; }
+
+      .panelModal {
+        width: 100%;
+        max-width: 520px;
+        max-height: calc(100vh - 28px);
+        margin-top: 18px;
+        border-radius: 14px;
+        padding: 12px 10px;
+      }
+
+      #menuOverlay {
+        padding-top: 22px;
+        padding-bottom: 22px;
+      }
+
+      #menuOverlay .panelModal {
+        max-height: 70vh;
+        margin-top: 0;
+      }
+
+      .menuSectionBody .notesList,
+      .menuSectionBody .recentList,
+      .tagsList,
+      .tagPagesList {
+        max-height: 180px;
+      }
     }
   </style>
 </head>
 <body>
   <div class="app">
     <div class="toolbar">
-      <!-- Кнопка «Назад» -->
-      <button id="backBtn" title="Назад" disabled>
+      <button id="backBtn" type="button" title="Назад" disabled>
         <svg class="icon" viewBox="0 0 24 24">
           <line x1="19" y1="12" x2="5" y2="12"></line>
           <polyline points="12 19 5 12 12 5"></polyline>
         </svg>
       </button>
 
-      <!-- Кнопка «Вперёд» -->
-      <button id="forwardBtn" title="Вперёд" disabled>
+      <button id="forwardBtn" type="button" title="Вперёд" disabled>
         <svg class="icon" viewBox="0 0 24 24">
           <line x1="5" y1="12" x2="19" y2="12"></line>
           <polyline points="12 5 19 12 12 19"></polyline>
@@ -919,7 +788,7 @@
 
       <div class="logo">LogBook</div>
 
-      <button id="menuBtn" class="secondary" title="Меню">
+      <button id="menuBtn" class="secondary" type="button" title="Меню">
         <svg class="icon" viewBox="0 0 24 24">
           <line x1="3" y1="6" x2="21" y2="6"></line>
           <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -927,7 +796,7 @@
         </svg>
       </button>
 
-      <button id="calendarBtn" title="Календарь">
+      <button id="calendarBtn" type="button" title="Календарь">
         <svg class="icon" viewBox="0 0 24 24">
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
           <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -936,46 +805,14 @@
         </svg>
       </button>
 
-      <button id="exportBtn" title="Экспортировать резервную копию">
-        <svg class="icon" viewBox="0 0 24 24">
-            <path d="M12 3v12"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <path d="M5 21h14"></path>
-        </svg>
-        </button>
-
-        <button id="importBtn" title="Импортировать резервную копию">
-        <svg class="icon" viewBox="0 0 24 24">
-            <path d="M12 21V9"></path>
-            <polyline points="7 14 12 9 17 14"></polyline>
-            <path d="M5 3h14"></path>
-        </svg>
-        </button>
-
-        <button id="syncBtn" title="Синхронизировать с ПК">
-        <svg class="icon" viewBox="0 0 24 24">
-            <polyline points="23 4 23 10 17 10"></polyline>
-            <polyline points="1 20 1 14 7 14"></polyline>
-            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
-            <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
-        </svg>
-        </button>
-
-        <input
-        id="importFileInput"
-        type="file"
-        accept="application/json,.json"
-        hidden
-        />
-
-      <button id="editToggleBtn" title="Редактировать">
+      <button id="editToggleBtn" type="button" title="Редактировать">
         <svg class="icon" viewBox="0 0 24 24">
           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
         </svg>
       </button>
 
-      <button id="deleteNoteBtn" class="danger" title="Удалить">
+      <button id="deleteNoteBtn" class="danger" type="button" title="Удалить">
         <svg class="icon" viewBox="0 0 24 24">
           <polyline points="3 6 5 6 21 6"></polyline>
           <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -983,136 +820,175 @@
       </button>
     </div>
 
-  <input id="titleInput" type="text" placeholder="Заголовок заметки" />
+    <input id="titleInput" type="text" placeholder="Заголовок заметки" />
 
-  <div id="tagsEditor" class="tagsEditor">
+    <div id="tagsEditor" class="tagsEditor">
       <label for="tagsInput">Теги</label>
-      <input
-              id="tagsInput"
-              type="text"
-              placeholder="например: работа, проект, друг"
-              autocomplete="off"
-      />
+      <input id="tagsInput" type="text" placeholder="например: работа, проект, друг" autocomplete="off" />
       <div class="tagsHint">Разделяйте теги запятыми</div>
-  </div>
-
-  <textarea id="bodyInput" placeholder="Текст заметки (Markdown)..."></textarea>
-
-  <div id="previewContainer"></div>
-  <div id="noteTagsView" class="noteTagsView" aria-label="Теги заметки"></div>
-
-    <!-- Оверлей меню -->
-    <div id="menuOverlay" class="panelOverlay" aria-hidden="true">
-    <section class="panelModal" role="dialog" aria-modal="true" aria-labelledby="menuModalTitle">
-        <div class="panelModalHeader">
-        <h2 id="menuModalTitle" class="panelModalTitle">Меню</h2>
-        <button id="closeMenuBtn" class="panelModalClose" title="Закрыть меню" aria-label="Закрыть меню">
-            <svg class="icon" viewBox="0 0 24 24">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="6"></line>
-            </svg>
-        </button>
-        </div>
-
-        <div class="panelModalBody">
-            <div id="drawer" class="drawer">
-                <section class="menuSection">
-                    <button
-                            id="viewedSectionBtn"
-                            class="menuSectionHeader"
-                            type="button"
-                            aria-expanded="true"
-                    >
-                        <span>Просмотренные</span>
-                        <span class="menuSectionChevron">⌄</span>
-                    </button>
-                    <div id="viewedSectionBody" class="menuSectionBody">
-                        <div id="recentList" class="recentList"></div>
-                    </div>
-                </section>
-
-                <section class="menuSection">
-                    <button
-                            id="pagesSectionBtn"
-                            class="menuSectionHeader"
-                            type="button"
-                            aria-expanded="true"
-                    >
-                        <span>Страницы</span>
-                        <span class="menuSectionChevron">⌄</span>
-                    </button>
-                    <div id="pagesSectionBody" class="menuSectionBody">
-                        <input
-                                id="searchInput"
-                                type="text"
-                                placeholder="Поиск по страницам..."
-                        />
-                        <div id="notesList" class="notesList"></div>
-                    </div>
-                </section>
-
-                <section class="menuSection">
-                    <button
-                            id="tagsSectionBtn"
-                            class="menuSectionHeader"
-                            type="button"
-                            aria-expanded="true"
-                    >
-                        <span>Теги</span>
-                        <span class="menuSectionChevron">⌄</span>
-                    </button>
-                    <div id="tagsSectionBody" class="menuSectionBody">
-                        <div id="tagsList" class="tagsList"></div>
-                        <div id="tagPagesView" class="tagPagesView" hidden>
-                            <button id="allTagsBtn" class="backToTagsBtn" type="button">
-                                ← Все теги
-                            </button>
-                            <div id="selectedTagTitle" class="selectedTagTitle"></div>
-                            <div id="tagPagesList" class="tagPagesList"></div>
-                        </div>
-                    </div>
-                </section>
-            </div>
-        </div>
-    </section>
     </div>
 
-    <!-- Оверлей календаря -->
-    <div id="calendarOverlay" class="panelOverlay" aria-hidden="true">
-    <section class="panelModal" role="dialog" aria-modal="true" aria-labelledby="calendarModalTitle">
+    <textarea id="bodyInput" placeholder="Текст заметки (Markdown)..."></textarea>
+    <div id="previewContainer"></div>
+    <div id="noteTagsView" class="noteTagsView" aria-label="Теги заметки"></div>
+
+    <div id="menuOverlay" class="panelOverlay" aria-hidden="true">
+      <section class="panelModal" role="dialog" aria-modal="true" aria-labelledby="menuModalTitle">
         <div class="panelModalHeader">
-        <h2 id="calendarModalTitle" class="panelModalTitle">Календарь</h2>
-        <button id="closeCalendarBtn" class="panelModalClose" title="Закрыть календарь" aria-label="Закрыть календарь">
+          <h2 id="menuModalTitle" class="panelModalTitle">Меню</h2>
+          <button id="closeMenuBtn" class="panelModalClose" type="button" title="Закрыть меню" aria-label="Закрыть меню">
             <svg class="icon" viewBox="0 0 24 24">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="6"></line>
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
-        </button>
+          </button>
+        </div>
+
+        <div class="menuToolbar">
+          <button id="exportBtn" type="button" title="Экспортировать резервную копию">
+            <svg class="icon" viewBox="0 0 24 24">
+              <path d="M12 3v12"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <path d="M5 21h14"></path>
+            </svg>
+          </button>
+          <button id="importBtn" type="button" title="Импортировать резервную копию">
+            <svg class="icon" viewBox="0 0 24 24">
+              <path d="M12 21V9"></path>
+              <polyline points="7 14 12 9 17 14"></polyline>
+              <path d="M5 3h14"></path>
+            </svg>
+          </button>
+          <button id="syncBtn" type="button" title="Синхронизировать с ПК">
+            <svg class="icon" viewBox="0 0 24 24">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <polyline points="1 20 1 14 7 14"></polyline>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+              <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
+            </svg>
+          </button>
+          <button id="settingsBtn" type="button" title="Настройки">
+            <svg class="icon" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </button>
+        </div>
+
+        <input id="importFileInput" type="file" accept="application/json,.json" hidden />
+
+        <div class="panelModalBody">
+          <div id="drawer" class="drawer open">
+            <section class="menuSection">
+              <button id="viewedSectionBtn" class="menuSectionHeader" type="button" aria-expanded="true">
+                <span>Просмотренные</span>
+                <span class="menuSectionChevron">⌄</span>
+              </button>
+              <div id="viewedSectionBody" class="menuSectionBody">
+                <div id="recentList" class="recentList"></div>
+              </div>
+            </section>
+
+            <section class="menuSection">
+              <button id="pagesSectionBtn" class="menuSectionHeader" type="button" aria-expanded="true">
+                <span>Страницы</span>
+                <span class="menuSectionChevron">⌄</span>
+              </button>
+              <div id="pagesSectionBody" class="menuSectionBody">
+                <input id="searchInput" type="text" placeholder="Поиск по страницам..." />
+                <div id="notesList" class="notesList"></div>
+              </div>
+            </section>
+
+            <section class="menuSection">
+              <button id="tagsSectionBtn" class="menuSectionHeader" type="button" aria-expanded="true">
+                <span>Теги</span>
+                <span class="menuSectionChevron">⌄</span>
+              </button>
+              <div id="tagsSectionBody" class="menuSectionBody">
+                <div id="tagsList" class="tagsList"></div>
+                <div id="tagPagesView" class="tagPagesView" hidden>
+                  <button id="allTagsBtn" class="backToTagsBtn" type="button">← Все теги</button>
+                  <div id="selectedTagTitle" class="selectedTagTitle"></div>
+                  <div id="tagPagesList" class="tagPagesList"></div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div id="calendarOverlay" class="panelOverlay" aria-hidden="true">
+      <section class="panelModal" role="dialog" aria-modal="true" aria-labelledby="calendarModalTitle">
+        <div class="panelModalHeader">
+          <h2 id="calendarModalTitle" class="panelModalTitle">Календарь</h2>
+          <button id="closeCalendarBtn" class="panelModalClose" type="button" title="Закрыть календарь" aria-label="Закрыть календарь">
+            <svg class="icon" viewBox="0 0 24 24">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
         </div>
 
         <div class="panelModalBody">
-        <div id="calendarPanel" class="calendarPanel">
+          <div id="calendarPanel" class="calendarPanel">
             <div class="calendarHeader">
-            <select id="calendarMonthSelect"></select>
-            <select id="calendarYearSelect"></select>
+              <select id="calendarMonthSelect"></select>
+              <select id="calendarYearSelect"></select>
             </div>
-
             <div class="calendarGrid" id="calendarWeekdaysGrid"></div>
             <div class="calendarGrid" id="calendarDaysGrid"></div>
+          </div>
         </div>
-        </div>
-    </section>
+      </section>
     </div>
 
-      <div class="calendarGrid" id="calendarWeekdaysGrid"></div>
-      <div class="calendarGrid" id="calendarDaysGrid"></div>
+    <div id="settingsOverlay" class="panelOverlay" aria-hidden="true">
+      <section class="panelModal" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
+        <div class="panelModalHeader">
+          <h2 id="settingsModalTitle" class="panelModalTitle">Настройки</h2>
+          <button id="closeSettingsBtn" class="panelModalClose" type="button" title="Закрыть настройки" aria-label="Закрыть настройки">
+            <svg class="icon" viewBox="0 0 24 24">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="panelModalBody">
+          <div class="settingsSection">
+            <h3>Шифрование</h3>
+            <label class="settingsCheckbox">
+              <input type="checkbox" id="enableEncryptionCheckbox">
+              Включить шифрование заметок
+            </label>
+            <div id="passwordSection" class="passwordSection" style="display:none;">
+              <label class="settingsLabel">
+                Пароль шифрования:
+                <input type="password" id="encryptionPasswordInput" placeholder="Минимум 12 символов" class="settingsInput">
+              </label>
+              <button id="savePasswordBtn" type="button" class="settingsBtn">Сохранить пароль</button>
+              <button id="changePasswordBtn" type="button" class="settingsBtn" style="display:none;">Сменить пароль</button>
+            </div>
+          </div>
+
+          <div class="settingsSection">
+            <h3>Безопасность</h3>
+            <label class="settingsLabel">
+              Максимум попыток ввода пароля:
+              <input type="number" id="maxAttemptsInput" min="1" max="20" value="7" class="settingsInput">
+            </label>
+            <button id="saveMaxAttemptsBtn" type="button" class="settingsBtn">Сохранить</button>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 
   <script src="markdown-it.min.js"></script>
   <script src="markdown-it-checkbox.min.js"></script>
   <script src="markdown-it-footnote.min.js"></script>
-
   <script src="app.js"></script>
 </body>
 </html>

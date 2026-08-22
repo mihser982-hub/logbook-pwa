@@ -364,12 +364,10 @@ async function findNoteByTitle(title) {
 async function saveNote(note) {
   const normalizedNote = normalizeNote(note);
 
-  // Если это новая заметка (нет id), проверяем, нет ли уже заметки с таким заголовком
   if (!normalizedNote.id && normalizedNote.title) {
     const existingNotes = await getAllNotes();
     const existing = existingNotes.find((n) => n.title === normalizedNote.title && n.id !== normalizedNote.id);
     if (existing) {
-      // Обновляем существующую заметку вместо создания дубля
       return saveNote({
         ...normalizedNote,
         id: existing.id,
@@ -464,7 +462,6 @@ async function exportBackup() {
     notes
   };
 
-  // Если шифрование включено, шифруем весь backup
   if (encryptionEnabled && masterKey) {
     const encryptedBackup = await encryptJson(backup, masterKey);
     const backupEncrypted = {
@@ -488,7 +485,6 @@ async function exportBackup() {
 
     alert(`Зашифрованная резервная копия создана.\n\nЗаметок: ${notes.length}`);
   } else {
-    // Шифрование выключено — сохраняем как plain JSON
     const json = JSON.stringify(backup, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -508,10 +504,7 @@ function isValidBackup(backup) {
   if (!backup || typeof backup !== 'object') return false;
   if (backup.app !== 'LogBook') return false;
 
-  // Обычный backup (незашифрованный)
   if (!backup.encrypted && !Array.isArray(backup.notes)) return false;
-
-  // Зашифрованный backup
   if (backup.encrypted && (!backup.data || typeof backup.data !== 'object')) return false;
 
   return true;
@@ -535,8 +528,6 @@ async function importBackupFromFile(file) {
     return;
   }
 
-  // - - - - -
-  // Если backup зашифрован, расшифровываем его
   if (backup.encrypted && backup.data) {
     if (!encryptionEnabled || !masterKey) {
       alert('Этот backup зашифрован. Сначала введите пароль шифрования.');
@@ -551,7 +542,6 @@ async function importBackupFromFile(file) {
       return;
     }
   }
-  // - - - - -
 
   const incomingNotes = backup.notes.filter((note) => {
     return note && typeof note === 'object' && typeof note.title === 'string' && typeof note.body === 'string';
@@ -578,7 +568,6 @@ async function importBackupFromFile(file) {
   let added = 0;
   let updated = 0;
 
-  // Группируем incoming заметки по заголовку и оставляем только непустые версии
   const incomingByTitle = new Map();
   for (const note of incomingNotes) {
     const key = note.title;
@@ -588,9 +577,6 @@ async function importBackupFromFile(file) {
     incomingByTitle.get(key).push(note);
   }
 
-  // Для каждого заголовка оставляем только одну заметку:
-  // - если есть непустая body — берём её;
-  // - иначе берём первую попавшуюся.
   const incomingDeduped = [];
   for (const [key, notes] of incomingByTitle.entries()) {
     const nonEmpty = notes.find((n) => (n.body || '').trim() !== '');
@@ -882,7 +868,12 @@ function closeTagPages() {
 }
 
 function setupMenuSections() {
-  const sections = [['viewedSectionBtn', 'viewedSectionBody'], ['pagesSectionBtn', 'pagesSectionBody'], ['tagsSectionBtn', 'tagsSectionBody']];
+  const sections = [
+    ['viewedSectionBtn', 'viewedSectionBody'],
+    ['pagesSectionBtn', 'pagesSectionBody'],
+    ['tagsSectionBtn', 'tagsSectionBody']
+  ];
+
   for (const [buttonId, bodyId] of sections) {
     const button = document.getElementById(buttonId);
     const body = document.getElementById(bodyId);
@@ -1325,7 +1316,91 @@ async function enableEncryptionWithPassword() {
 }
 
 // =========================
-// 5) Инициализация приложения
+// 5) Настройки: смена пароля
+// =========================
+
+async function changeEncryptionPassword() {
+  if (!encryptionConfig || !masterKey || !encryptionEnabled) {
+    alert('Сначала разблокируйте шифрование.');
+    return;
+  }
+
+  const oldPassword = prompt('Введите текущий пароль шифрования:');
+  if (!oldPassword) return;
+
+  try {
+    await unlockEncryption(oldPassword);
+  } catch (error) {
+    alert('Неверный текущий пароль.');
+    return;
+  }
+
+  const newPassword = prompt('Введите новый пароль шифрования (минимум 12 символов):');
+  if (!newPassword || newPassword.length < 12) {
+    alert('Пароль должен содержать не менее 12 символов.');
+    return;
+  }
+
+  const allNotes = await getAllNotes();
+  const newSalt = crypto.getRandomValues(new Uint8Array(SALT_BYTES));
+  const newKey = await deriveMasterKey(newPassword, newSalt);
+  const newVerifier = await encryptJson(
+    { purpose: 'logbook-password-verifier', version: CRYPTO_VERSION },
+    newKey
+  );
+
+  const newConfig = {
+    version: CRYPTO_VERSION,
+    kdf: {
+      name: 'PBKDF2',
+      hash: 'SHA-256',
+      iterations: PBKDF2_ITERATIONS,
+      salt: bytesToBase64(newSalt)
+    },
+    cipher: { name: 'AES-GCM', keyLength: 256 },
+    verifier: newVerifier,
+    createdAt: Date.now()
+  };
+
+  for (const note of allNotes) {
+    await saveNoteWithKey(note, newKey);
+  }
+
+  await saveEncryptionConfig(newConfig);
+  encryptionConfig = newConfig;
+  masterKey = newKey;
+  encryptionEnabled = true;
+
+  alert('Пароль успешно изменён.');
+}
+
+async function saveNoteWithKey(note, key) {
+  const normalizedNote = normalizeNote(note);
+  const payload = {
+    title: normalizedNote.title || '',
+    body: normalizedNote.body || '',
+    tags: normalizedNote.tags || []
+  };
+  const encryptedData = await encryptJson(payload, key);
+  const record = {
+    id: normalizedNote.id,
+    syncId: normalizedNote.syncId,
+    encrypted: true,
+    data: encryptedData,
+    createdAt: normalizedNote.createdAt,
+    updatedAt: normalizedNote.updatedAt
+  };
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const request = tx.objectStore(STORE_NAME).put(record);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+// =========================
+// 6) Инициализация приложения
 // =========================
 
 async function initApp() {
@@ -1334,24 +1409,59 @@ async function initApp() {
   console.log('encryptionConfig после load:', encryptionConfig);
   console.log('encryptionEnabled после load:', encryptionEnabled);
 
+  if (!encryptionConfig) {
+    const shouldEnable = confirm('Шифрование заметок пока не включено. Настроить пароль сейчас?');
+    if (shouldEnable) {
+      const password = prompt('Введите пароль шифрования (минимум 12 символов):');
+      if (password && password.length >= 12) {
+        await createEncryptionConfig(password);
+        alert('Шифрование включено.');
+      } else if (password) {
+        alert('Пароль должен содержать не менее 12 символов.');
+      }
+    }
+  }
+
+  const attemptsRecord = await requestToPromise(
+      getSettingsStore().get('maxPasswordAttempts')
+  );
+  const maxAttempts = Number(attemptsRecord?.value) || 7;
+
   if (encryptionConfig) {
     let unlocked = false;
+    let failedAttempts = 0;
+
     while (!unlocked) {
-      const password = prompt('Шифрование включено.\nВведите пароль для расшифровки заметок:\n(нажмите Отмена, чтобы закрыть приложение)');
+      const left = Math.max(maxAttempts - failedAttempts, 0);
+      const password = prompt(
+          'Шифрование включено.\n' +
+          'Введите пароль для расшифровки заметок.\n' +
+          `Осталось попыток: ${left}\n` +
+          '(Отмена закроет приложение)'
+      );
+
       if (!password) {
         appLocked = true;
         alert('Приложение заблокировано. Перезагрузите страницу, чтобы ввести пароль.');
         break;
       }
+
       try {
         await unlockEncryption(password);
         encryptionEnabled = true;
         unlocked = true;
         appLocked = false;
-        console.log('Шифрование разблокировано, ключ загружен.');
       } catch (err) {
         console.error('Ошибка при расшифровке:', err);
-        alert('Неверный пароль. Попробуйте ещё раз.');
+        failedAttempts += 1;
+
+        if (failedAttempts >= maxAttempts) {
+          appLocked = true;
+          alert('Превышено число попыток. Приложение заблокировано.');
+          break;
+        }
+
+        alert(`Неверный пароль. Осталось попыток: ${maxAttempts - failedAttempts}`);
       }
     }
   } else {
@@ -1410,9 +1520,17 @@ async function initApp() {
   function openMenuOverlay() {
     calendarOverlayEl.classList.remove('open');
     calendarOverlayEl.setAttribute('aria-hidden', 'true');
+
+    const drawer = document.getElementById('drawer');
+    if (drawer) drawer.classList.add('open');
+
     menuOverlayEl.classList.add('open');
     menuOverlayEl.setAttribute('aria-hidden', 'false');
     menuBtn.title = 'Закрыть меню';
+
+    renderNotesList();
+    renderRecentList();
+    renderTagsList();
   }
 
   menuBtn.onclick = () => {
@@ -1468,12 +1586,105 @@ async function initApp() {
 
   searchInput.addEventListener('input', renderNotesList);
 
+  // --- Settings ---
+  const settingsBtn = document.getElementById('settingsBtn');
+  const settingsOverlay = document.getElementById('settingsOverlay');
+  const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+  const enableEncryptionCheckbox = document.getElementById('enableEncryptionCheckbox');
+  const passwordSection = document.getElementById('passwordSection');
+  const encryptionPasswordInput = document.getElementById('encryptionPasswordInput');
+  const savePasswordBtn = document.getElementById('savePasswordBtn');
+  const changePasswordBtn = document.getElementById('changePasswordBtn');
+  const maxAttemptsInput = document.getElementById('maxAttemptsInput');
+  const saveMaxAttemptsBtn = document.getElementById('saveMaxAttemptsBtn');
+
+  function closeSettings() {
+    settingsOverlay.classList.remove('open');
+    settingsOverlay.setAttribute('aria-hidden', 'true');
+  }
+
+  if (settingsBtn && settingsOverlay) {
+    settingsBtn.onclick = async () => {
+      const record = await requestToPromise(
+          getSettingsStore().get(CRYPTO_SETTINGS_KEY)
+      );
+      const config = record?.value || encryptionConfig;
+      enableEncryptionCheckbox.checked = Boolean(config);
+      passwordSection.style.display = config ? 'block' : 'none';
+      savePasswordBtn.style.display = config ? 'none' : 'inline-flex';
+      changePasswordBtn.style.display = config ? 'inline-flex' : 'none';
+
+      const attemptsRecord = await requestToPromise(
+        getSettingsStore().get('maxPasswordAttempts')
+      );
+      maxAttemptsInput.value = attemptsRecord?.value || 7;
+
+      settingsOverlay.classList.add('open');
+      settingsOverlay.setAttribute('aria-hidden', 'false');
+    };
+  }
+
+  if (closeSettingsBtn) {
+    closeSettingsBtn.onclick = closeSettings;
+  }
+
+  settingsOverlay.onclick = (event) => {
+    if (event.target === settingsOverlay) closeSettings();
+  };
+
+  if (enableEncryptionCheckbox && passwordSection) {
+    enableEncryptionCheckbox.onchange = () => {
+      passwordSection.style.display = enableEncryptionCheckbox.checked ? 'block' : 'none';
+    };
+  }
+
+  if (savePasswordBtn) {
+    savePasswordBtn.onclick = async () => {
+      const password = encryptionPasswordInput.value;
+      if (!password || password.length < 12) {
+        alert('Пароль должен содержать не менее 12 символов.');
+        return;
+      }
+
+      try {
+        await createEncryptionConfig(password);
+        encryptionPasswordInput.value = '';
+        alert('Шифрование включено.');
+        closeSettings();
+      } catch (error) {
+        console.error('Ошибка включения шифрования:', error);
+        alert('Не удалось включить шифрование.');
+      }
+    };
+  }
+
+  if (changePasswordBtn) {
+    changePasswordBtn.onclick = changeEncryptionPassword;
+  }
+
+  if (saveMaxAttemptsBtn) {
+    saveMaxAttemptsBtn.onclick = async () => {
+      const attempts = Number.parseInt(maxAttemptsInput.value, 10);
+      if (!Number.isInteger(attempts) || attempts < 1 || attempts > 20) {
+        alert('Количество попыток должно быть от 1 до 20.');
+        return;
+      }
+
+      const store = getSettingsStore('readwrite');
+      await requestToPromise(store.put({
+        key: 'maxPasswordAttempts',
+        value: attempts
+      }));
+      alert('Настройка сохранена.');
+    };
+  }
+
   // ВРЕМЕННО: включить шифрование по паролю
   //await enableEncryptionWithPassword();
 }
 
 // =========================
-// 6) Календарь
+// 7) Календарь
 // =========================
 
 const calendarPanelEl = document.getElementById('calendarPanel');
