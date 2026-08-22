@@ -1307,6 +1307,40 @@ async function openOrCreateTodayDaily() {
   }
 }
 
+async function enableEncryptionForExistingNotes(password) {
+  if (encryptionConfig) {
+    throw new Error('Шифрование уже настроено.');
+  }
+
+  if (!password || password.length < 12) {
+    throw new Error('Пароль должен содержать не менее 12 символов.');
+  }
+
+  // Пока шифрование не включено, здесь получаем текущие plain-заметки.
+  const notesToEncrypt = await getAllNotes();
+
+  // Создаёт новую соль, конфиг и загружает новый ключ в masterKey.
+  await createEncryptionConfig(password);
+
+  let encryptedCount = 0;
+
+  for (const note of notesToEncrypt) {
+    // У заметки есть id, поэтому saveNote обновляет эту же запись,
+    // а не создаёт дубликат. При включённом encryptionEnabled
+    // saveNote автоматически зашифрует title, body и tags.
+    await saveNote({
+      ...note,
+      id: note.id,
+      createdAt: note.createdAt,
+      updatedAt: note.updatedAt
+    });
+
+    encryptedCount += 1;
+  }
+
+  return encryptedCount;
+}
+
 async function enableEncryptionWithPassword() {
   const existingConfig = await new Promise((resolve, reject) => {
     try {
@@ -1464,16 +1498,20 @@ async function initApp() {
       const password = prompt('Введите пароль шифрования (минимум 12 символов):');
 
       if (password && password.length >= 12) {
-        await createEncryptionConfig(password);
+        const encryptedCount = await enableEncryptionForExistingNotes(password);
         encryptionCreatedThisSession = true;
-        alert('Шифрование включено.');
+
+        alert(
+            'Шифрование включено.\n\n' +
+            `Зашифровано заметок: ${encryptedCount}`
+        );
       } else if (password) {
         alert('Пароль должен содержать не менее 12 символов.');
       }
     }
   }
 
-  const attemptsRecord = await requestToPromise(
+  const attemptsRecord = await requestToPromise( // --- Это строка 1515 ---
       getSettingsStore().get('maxPasswordAttempts')
   );
   const maxAttempts = Number(attemptsRecord?.value) || 7;
@@ -1715,9 +1753,13 @@ async function initApp() {
       }
 
       try {
-        await createEncryptionConfig(password);
+        const encryptedCount = await enableEncryptionForExistingNotes(password);
+
         encryptionPasswordInput.value = '';
-        alert('Шифрование включено.');
+        alert(
+            'Шифрование включено.\n\n' +
+            `Зашифровано заметок: ${encryptedCount}`
+        );
         closeSettings();
       } catch (error) {
         console.error('Ошибка включения шифрования:', error);
