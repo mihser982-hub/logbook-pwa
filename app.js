@@ -863,18 +863,48 @@ async function renderTagsList() {
   }
 }
 
+function openMenuToTags() {
+  const menuOverlayEl = document.getElementById('menuOverlay');
+  const calendarOverlayEl = document.getElementById('calendarOverlay');
+  const drawer = document.getElementById('drawer');
+  const tagsBtn = document.getElementById('tagsSectionBtn');
+  const tagsSection = tagsBtn?.closest('.menuSection');
+
+  if (calendarOverlayEl) {
+    calendarOverlayEl.classList.remove('open');
+    calendarOverlayEl.setAttribute('aria-hidden', 'true');
+  }
+
+  if (drawer) drawer.classList.add('open');
+
+  if (menuOverlayEl) {
+    menuOverlayEl.classList.add('open');
+    menuOverlayEl.setAttribute('aria-hidden', 'false');
+  }
+
+  if (tagsSection) tagsSection.classList.remove('collapsed');
+  if (tagsBtn) tagsBtn.setAttribute('aria-expanded', 'true');
+}
+
 async function openTagPages(tag) {
+  openMenuToTags();
+
   const normalizedTag = normalizeTag(tag);
   const notes = await getAllNotes();
-  const matchingNotes = notes.filter((note) => normalizeTags(note.tags).includes(normalizedTag)).sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'ru'));
+  const matchingNotes = notes
+      .filter((note) => normalizeTags(note.tags).includes(normalizedTag))
+      .sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'ru'));
+
   const tagPagesViewEl = document.getElementById('tagPagesView');
   const tagsListEl = document.getElementById('tagsList');
   const selectedTagTitleEl = document.getElementById('selectedTagTitle');
   const tagPagesListEl = document.getElementById('tagPagesList');
+
   tagsListEl.hidden = true;
   tagPagesViewEl.hidden = false;
   selectedTagTitleEl.textContent = `Страницы с тегом #${normalizedTag} (${matchingNotes.length})`;
   tagPagesListEl.innerHTML = '';
+
   for (const note of matchingNotes) {
     const button = document.createElement('button');
     button.type = 'button';
