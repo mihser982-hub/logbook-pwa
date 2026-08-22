@@ -469,6 +469,12 @@ async function exportBackup() {
       version: 1,
       encrypted: true,
       exportedAt: backup.exportedAt,
+      kdf: encryptionConfig?.kdf || {
+        name: 'PBKDF2',
+        hash: 'SHA-256',
+        iterations: PBKDF2_ITERATIONS,
+        salt: encryptionConfig.kdf.salt
+      },
       data: encryptedBackup
     };
 
@@ -529,18 +535,37 @@ async function importBackupFromFile(file) {
   }
 
   if (backup.encrypted && backup.data) {
-    if (!encryptionEnabled || !masterKey) {
-      alert('Этот backup зашифрован. Сначала введите пароль шифрования.');
+    let decrypted = null;
+
+    if (encryptionEnabled && masterKey) {
+      try {
+        decrypted = await decryptJson(backup.data, masterKey);
+      } catch (err) {
+        console.warn('Текущий ключ не подошёл к backup:', err);
+      }
+    }
+
+    if (!decrypted && backup.kdf?.salt) {
+      const password = prompt('Этот backup зашифрован. Введите пароль, которым он был создан:');
+      if (!password) return;
+
+      try {
+        const salt = base64ToBytes(backup.kdf.salt);
+        const backupKey = await deriveMasterKey(password, salt);
+        decrypted = await decryptJson(backup.data, backupKey);
+      } catch (err) {
+        console.error('Ошибка расшифровки backup:', err);
+        alert('Не удалось расшифровать backup. Неверный пароль или повреждённый файл.');
+        return;
+      }
+    }
+
+    if (!decrypted) {
+      alert('Не удалось расшифровать backup.\n\nЕсли это старый файл без поля kdf, он открывается только тем же ключом, которым был создан.');
       return;
     }
-    try {
-      const decrypted = await decryptJson(backup.data, masterKey);
-      backup = decrypted;
-    } catch (err) {
-      console.error('Ошибка расшифровки backup:', err);
-      alert('Не удалось расшифровать backup. Неверный пароль или повреждённый файл.');
-      return;
-    }
+
+    backup = decrypted;
   }
 
   const incomingNotes = backup.notes.filter((note) => {
@@ -1406,15 +1431,41 @@ async function saveNoteWithKey(note, key) {
 async function initApp() {
   await openDB();
   await loadEncryptionConfig();
+
   console.log('encryptionConfig после load:', encryptionConfig);
   console.log('encryptionEnabled после load:', encryptionEnabled);
 
-  if (!encryptionConfig) {
-    const shouldEnable = confirm('Шифрование заметок пока не включено. Настроить пароль сейчас?');
+  // Смотрим записи напрямую, до расшифровки.
+  // Это защищает от опасной ситуации: зашифрованные заметки есть,
+  // а конфиг утерян. Новый пароль в таком случае создавать нельзя.
+  const rawNotes = await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const request = tx.objectStore(STORE_NAME).getAll();
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => reject(request.error);
+  });
+
+  const hasEncryptedNotes = rawNotes.some((note) => note.encrypted === true);
+  let encryptionCreatedThisSession = false;
+
+  if (!encryptionConfig && hasEncryptedNotes) {
+    appLocked = true;
+    alert(
+        'Найдены зашифрованные заметки, но настройки шифрования не найдены.\n\n' +
+        'Новый пароль создавать нельзя: он не откроет старые заметки.\n' +
+        'Откройте прежнюю копию приложения или восстановите резервную копию.'
+    );
+  } else if (!encryptionConfig) {
+    const shouldEnable = confirm(
+        'Шифрование заметок пока не включено. Настроить пароль сейчас?'
+    );
+
     if (shouldEnable) {
       const password = prompt('Введите пароль шифрования (минимум 12 символов):');
+
       if (password && password.length >= 12) {
         await createEncryptionConfig(password);
+        encryptionCreatedThisSession = true;
         alert('Шифрование включено.');
       } else if (password) {
         alert('Пароль должен содержать не менее 12 символов.');
@@ -1427,12 +1478,15 @@ async function initApp() {
   );
   const maxAttempts = Number(attemptsRecord?.value) || 7;
 
-  if (encryptionConfig) {
+  // Счётчик действует только в рамках текущего запуска страницы.
+  // После верного пароля он явно сбрасывается в 0.
+  let failedAttempts = 0;
+
+  if (!appLocked && encryptionConfig && !encryptionCreatedThisSession) {
     let unlocked = false;
-    let failedAttempts = 0;
 
     while (!unlocked) {
-      const left = Math.max(maxAttempts - failedAttempts, 0);
+      const left = maxAttempts - failedAttempts;
       const password = prompt(
           'Шифрование включено.\n' +
           'Введите пароль для расшифровки заметок.\n' +
@@ -1449,8 +1503,10 @@ async function initApp() {
       try {
         await unlockEncryption(password);
         encryptionEnabled = true;
+        failedAttempts = 0;
         unlocked = true;
         appLocked = false;
+        console.log('Шифрование разблокировано, ключ загружен.');
       } catch (err) {
         console.error('Ошибка при расшифровке:', err);
         failedAttempts += 1;
@@ -1464,8 +1520,11 @@ async function initApp() {
         alert(`Неверный пароль. Осталось попыток: ${maxAttempts - failedAttempts}`);
       }
     }
-  } else {
-    appLocked = false;
+  } else if (!appLocked && encryptionCreatedThisSession) {
+    // createEncryptionConfig уже положила ключ в masterKey.
+    encryptionEnabled = true;
+  } else if (!appLocked && !encryptionConfig) {
+    encryptionEnabled = false;
   }
 
   if (appLocked) {
@@ -1484,9 +1543,13 @@ async function initApp() {
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations()
-        .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister())))
+        .then((registrations) => Promise.all(
+            registrations.map((registration) => registration.unregister())
+        ))
         .then(() => caches.keys())
-        .then((cacheNames) => Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName))))
+        .then((cacheNames) => Promise.all(
+            cacheNames.map((cacheName) => caches.delete(cacheName))
+        ))
         .then(() => console.log('Service Worker и его кэш временно отключены.'))
         .catch((error) => console.error('Не удалось отключить Service Worker:', error));
   }
@@ -1539,7 +1602,9 @@ async function initApp() {
   };
 
   closeMenuBtn.onclick = closeMenuOverlay;
-  menuOverlayEl.onclick = (event) => { if (event.target === menuOverlayEl) closeMenuOverlay(); };
+  menuOverlayEl.onclick = (event) => {
+    if (event.target === menuOverlayEl) closeMenuOverlay();
+  };
 
   const calendarBtn = document.getElementById('calendarBtn');
   calendarBtn.onclick = async () => {
@@ -1550,7 +1615,9 @@ async function initApp() {
   };
 
   closeCalendarBtnEl.onclick = () => closeCalendarPanel();
-  calendarOverlayEl.onclick = (event) => { if (event.target === calendarOverlayEl) closeCalendarPanel(); };
+  calendarOverlayEl.onclick = (event) => {
+    if (event.target === calendarOverlayEl) closeCalendarPanel();
+  };
 
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
@@ -1609,15 +1676,16 @@ async function initApp() {
           getSettingsStore().get(CRYPTO_SETTINGS_KEY)
       );
       const config = record?.value || encryptionConfig;
+
       enableEncryptionCheckbox.checked = Boolean(config);
       passwordSection.style.display = config ? 'block' : 'none';
       savePasswordBtn.style.display = config ? 'none' : 'inline-flex';
       changePasswordBtn.style.display = config ? 'inline-flex' : 'none';
 
-      const attemptsRecord = await requestToPromise(
-        getSettingsStore().get('maxPasswordAttempts')
+      const settingsAttemptsRecord = await requestToPromise(
+          getSettingsStore().get('maxPasswordAttempts')
       );
-      maxAttemptsInput.value = attemptsRecord?.value || 7;
+      maxAttemptsInput.value = settingsAttemptsRecord?.value || 7;
 
       settingsOverlay.classList.add('open');
       settingsOverlay.setAttribute('aria-hidden', 'false');
@@ -1678,9 +1746,6 @@ async function initApp() {
       alert('Настройка сохранена.');
     };
   }
-
-  // ВРЕМЕННО: включить шифрование по паролю
-  //await enableEncryptionWithPassword();
 }
 
 // =========================
