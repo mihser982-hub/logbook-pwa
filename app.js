@@ -456,22 +456,65 @@ function createBackupFileName() {
 
 async function exportBackup() {
   const notes = await getAllNotes();
-  const backup = { app: 'LogBook', version: 1, exportedAt: new Date().toISOString(), notes };
-  const json = JSON.stringify(backup, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = createBackupFileName();
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-  alert(`Резервная копия создана.\n\nЗаметок: ${notes.length}`);
+
+  const backup = {
+    app: 'LogBook',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    notes
+  };
+
+  // Если шифрование включено, шифруем весь backup
+  if (encryptionEnabled && masterKey) {
+    const encryptedBackup = await encryptJson(backup, masterKey);
+    const backupEncrypted = {
+      app: 'LogBook',
+      version: 1,
+      encrypted: true,
+      exportedAt: backup.exportedAt,
+      data: encryptedBackup
+    };
+
+    const json = JSON.stringify(backupEncrypted, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = createBackupFileName();
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    alert(`Зашифрованная резервная копия создана.\n\nЗаметок: ${notes.length}`);
+  } else {
+    // Шифрование выключено — сохраняем как plain JSON
+    const json = JSON.stringify(backup, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = createBackupFileName();
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    alert(`Резервная копия создана.\n\nЗаметок: ${notes.length}`);
+  }
 }
 
 function isValidBackup(backup) {
-  return backup && typeof backup === 'object' && backup.app === 'LogBook' && Array.isArray(backup.notes);
+  if (!backup || typeof backup !== 'object') return false;
+  if (backup.app !== 'LogBook') return false;
+
+  // Обычный backup (незашифрованный)
+  if (!backup.encrypted && !Array.isArray(backup.notes)) return false;
+
+  // Зашифрованный backup
+  if (backup.encrypted && (!backup.data || typeof backup.data !== 'object')) return false;
+
+  return true;
 }
 
 async function importBackupFromFile(file) {
@@ -491,6 +534,24 @@ async function importBackupFromFile(file) {
     alert('Этот файл не похож на резервную копию LogBook.');
     return;
   }
+
+  // - - - - -
+  // Если backup зашифрован, расшифровываем его
+  if (backup.encrypted && backup.data) {
+    if (!encryptionEnabled || !masterKey) {
+      alert('Этот backup зашифрован. Сначала введите пароль шифрования.');
+      return;
+    }
+    try {
+      const decrypted = await decryptJson(backup.data, masterKey);
+      backup = decrypted;
+    } catch (err) {
+      console.error('Ошибка расшифровки backup:', err);
+      alert('Не удалось расшифровать backup. Неверный пароль или повреждённый файл.');
+      return;
+    }
+  }
+  // - - - - -
 
   const incomingNotes = backup.notes.filter((note) => {
     return note && typeof note === 'object' && typeof note.title === 'string' && typeof note.body === 'string';
