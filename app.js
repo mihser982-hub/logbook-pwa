@@ -1409,22 +1409,6 @@ async function initApp() {
 
   // ВРЕМЕННО: включить шифрование по паролю
   //await enableEncryptionWithPassword();
-
-  // DEBUG: вывести все заметки в консоль
-  (async () => {
-    const allNotes = await getAllNotes();
-    console.log('=== ALL NOTES ===');
-    for (const note of allNotes) {
-      console.log('---');
-      console.log('id:', note.id);
-      console.log('syncId:', note.syncId);
-      console.log('title:', note.title);
-      console.log('body:', note.body);
-      console.log('createdAt:', note.createdAt);
-      console.log('updatedAt:', note.updatedAt);
-    }
-    console.log('=== END NOTES ===');
-  })();
 }
 
 // =========================
