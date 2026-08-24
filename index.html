@@ -1081,6 +1081,13 @@
   <script src="markdown-it.min.js"></script>
   <script src="markdown-it-checkbox.min.js"></script>
   <script src="markdown-it-footnote.min.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('./sw.js');
+      });
+    }
+  </script>
   <script src="app.js"></script>
 </body>
 </html>

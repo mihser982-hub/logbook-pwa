@@ -1609,19 +1609,6 @@ async function initApp() {
 
   await migrateExistingNotesForSync();
 
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations()
-        .then((registrations) => Promise.all(
-            registrations.map((registration) => registration.unregister())
-        ))
-        .then(() => caches.keys())
-        .then((cacheNames) => Promise.all(
-            cacheNames.map((cacheName) => caches.delete(cacheName))
-        ))
-        .then(() => console.log('Service Worker и его кэш временно отключены.'))
-        .catch((error) => console.error('Не удалось отключить Service Worker:', error));
-  }
-
   await openOrCreateTodayDaily();
   await renderNotesList();
   setupMenuSections();
