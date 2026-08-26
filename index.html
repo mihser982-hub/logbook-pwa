@@ -317,19 +317,22 @@
 
     .calendarGrid {
       display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 6px;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 4px;
+      padding: 6px 4px 8px;
     }
 
     .calendarCell {
       background: #fff;
       border: 1px solid #e5e7eb;
       border-radius: 8px;
-      padding: 6px 4px;
+      padding: 5px 2px;
       text-align: center;
-      font-size: 13px;
+      font-size: 12px;
       cursor: pointer;
       user-select: none;
+      min-width: 0;
+      box-sizing: border-box;
     }
 
     .calendarCell:hover {
@@ -344,8 +347,8 @@
     }
 
     .calendarCell.today {
-      outline: 2px solid var(--primary);
-      outline-offset: 2px;
+      outline: none;
+      box-shadow: inset 0 0 0 2px var(--primary);
     }
 
     .calendarWeekday {

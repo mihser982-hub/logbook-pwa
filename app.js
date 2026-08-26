@@ -1900,7 +1900,7 @@ async function renderCalendarDaysGrid() {
     const hasNote = dailyDatesSet.has(dateKey);
     if (hasNote) cell.classList.add('hasNote');
     if (isCurrentMonthToday && day === todayParts.day) cell.classList.add('today');
-    cell.textContent = String(day);
+    cell.textContent = String(day).padStart(2, '0');
     cell.onclick = () => handleCalendarDayClick(day, month, year);
     calendarDaysGridEl.appendChild(cell);
   }
