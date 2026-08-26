@@ -1327,14 +1327,30 @@ function newNote() {
 async function openOrCreateTodayDaily() {
   const todayTitle = getTodayDailyTitle();
   let note = await findNoteByTitle(todayTitle);
-  if (note) {
-    openNote(note);
-  } else {
+
+  if (!note) {
     const now = Date.now();
-    note = { title: todayTitle, body: '', createdAt: now, updatedAt: now };
-    note = await saveNote(note);
-    openNote(note);
+    const saved = await saveNote({
+      title: todayTitle,
+      body: '',
+      createdAt: now,
+      updatedAt: now
+    });
+    note = await findNoteByTitle(todayTitle);
+    if (!note) {
+      note = {
+        id: saved.id,
+        syncId: saved.syncId,
+        title: todayTitle,
+        body: '',
+        tags: [],
+        createdAt: now,
+        updatedAt: now
+      };
+    }
   }
+
+  openNote(note);
 }
 
 async function enableEncryptionForExistingNotes(password) {
