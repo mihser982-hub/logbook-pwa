@@ -19,11 +19,12 @@
       --line: #e4d9c8;
       --accent: #5c5346;
       --danger: #8a4a3a;
-      --shadow: none;
       --text: var(--ink);
       --primary: var(--accent);
       --card: var(--paper);
       --border: var(--line);
+      --shadow: none;
+      --icon-color: var(--accent);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -35,118 +36,11 @@
       color: var(--ink);
     }
 
-    .previewContainer a {
-      color: var(--accent);
-    }
-
-    .topbar,
-    .previewContainer,
-    .noteCard,
-    .drawer,
-    .panelModal,
-    .searchInput,
-    .titleInput,
-    .bodyInput,
-    .tagsInput,
-    .calendarCell {
-      background: transparent;
-      box-shadow: none;
-      border-color: var(--line);
-    }
-
-    .topbar {
-      border-bottom: 1px solid var(--line);
-    }
-
-    .previewContainer {
-      border: none;
-    }
-
-    .panelModal {
-      background: var(--paper);
-      border: 1px solid var(--line);
-    }
-
-    .calendarCell.hasNote {
-      background: transparent;
-      border-color: var(--accent);
-      font-weight: 600;
-    }
-
-    .calendarCell.today {
-      box-shadow: inset 0 0 0 1px var(--accent);
-    }
-
-    .menuSectionBtn,
-    .menuActionBtn,
-    .tagLink,
-    .tagPageLink,
-    #allTagsBtn,
-    #calendarMonthSelect,
-    #calendarYearSelect {
-      background: transparent;
-      border: none;
-      box-shadow: none;
-      color: var(--ink);
-    }
-
-    .menuActionBtn {
-      border-bottom: 1px solid var(--line);
-    }
-
-    .tagLink,
-    .tagPageLink {
-      border-bottom: 1px solid var(--line);
-    }
-
-    .iconBtn,
-    .primaryBtn,
-    .dangerBtn {
-      width: 36px;
-      height: 36px;
-      padding: 0;
-      border: none;
-      background: transparent;
-      color: var(--accent);
-      border-radius: 8px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      box-shadow: none;
-    }
-
-    .iconBtn svg,
-    .primaryBtn svg,
-    .dangerBtn svg {
-      stroke: currentColor;
-    }
-
-    .iconBtn:hover,
-    .primaryBtn:hover {
-      background: transparent;
-      color: var(--ink);
-    }
-
-    .dangerBtn {
-      color: var(--danger);
-    }
-
-    .dangerBtn:hover {
-      background: transparent;
-      color: #6e3a2e;
-    }
-
-    .iconBtn:disabled {
-      opacity: 0.35;
-      cursor: default;
-    }
-
     .app {
       max-width: 900px;
       margin: 0 auto;
-      background: var(--card);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+      background: var(--paper);
+      box-shadow: none;
       padding: 12px;
       height: 100vh;
       display: flex;
@@ -161,34 +55,38 @@
       flex-wrap: nowrap;
       margin-bottom: 10px;
       flex-shrink: 0;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 8px;
     }
 
     .logo {
       font-weight: 700;
       font-size: 18px;
       margin-right: auto;
-      color: var(--text);
+      color: var(--ink);
       white-space: nowrap;
     }
 
-    input, textarea, button {
+    input, textarea {
       font: inherit;
       padding: 6px 8px;
-      border-radius: 8px;
+      border-radius: 0;
       border: none;
       outline: none;
-      background: #f9fafb;
+      background: transparent;
+      color: var(--ink);
     }
 
     input:focus, textarea:focus {
       border: none;
-      box-shadow: 0 0 0 2px rgba(79,70,229,0.15);
+      box-shadow: none;
     }
 
     #titleInput {
       width: 100%;
       flex-shrink: 0;
       font-weight: 700;
+      background: transparent;
     }
 
     #bodyInput, #previewContainer {
@@ -202,15 +100,21 @@
     #bodyInput {
       display: none;
       min-height: 0;
+      font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, Monaco, "Courier New", monospace;
+      font-size: 15px;
+      line-height: 1.65;
+      tab-size: 2;
+      background: transparent;
     }
 
     #previewContainer {
-      background: #fff;
+      background: transparent;
       border: none;
-      border-radius: 8px;
-      padding: 10px;
-      line-height: 1.6;
+      border-radius: 0;
+      padding: 4px 2px 10px;
+      line-height: 1.7;
       display: block;
+      color: var(--ink);
     }
 
     #previewContainer h1,
@@ -243,17 +147,20 @@
     #previewContainer li { margin-bottom: 0.3em; }
 
     #previewContainer code {
-      background: #f3f4f6;
-      padding: 2px 6px;
-      border-radius: 4px;
+      background: transparent;
+      padding: 0;
+      border-radius: 0;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-size: 0.9em;
+      color: var(--accent);
     }
 
     #previewContainer pre {
-      background: #f3f4f6;
-      padding: 10px;
-      border-radius: 8px;
+      background: transparent;
+      padding: 8px 0;
+      border-radius: 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
       overflow-x: auto;
       margin-bottom: 0.8em;
     }
@@ -264,7 +171,7 @@
     }
 
     #previewContainer blockquote {
-      border-left: 3px solid #e5e7eb;
+      border-left: 2px solid var(--line);
       padding-left: 12px;
       margin-left: 0;
       margin-bottom: 0.8em;
@@ -281,13 +188,13 @@
 
     #previewContainer th,
     #previewContainer td {
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--line);
       padding: 6px 8px;
       text-align: left;
     }
 
     #previewContainer th {
-      background: #f9fafb;
+      background: transparent;
       font-weight: 600;
     }
 
@@ -302,18 +209,23 @@
     #previewContainer .footnotes {
       margin-top: 1em;
       padding-top: 0.5em;
-      border-top: 1px solid #e5e7eb;
+      border-top: 1px solid var(--line);
       font-size: 0.85em;
       color: var(--muted);
     }
 
+    #previewContainer a,
+    .previewContainer a {
+      color: var(--accent);
+    }
+
     #previewContainer a.internal-link {
-      color: var(--primary);
+      color: var(--accent);
       text-decoration: underline;
       cursor: pointer;
     }
 
-    #previewContainer a.internal-link:hover { color: var(--danger); }
+    #previewContainer a.internal-link:hover { color: var(--ink); }
 
     #previewContainer .foldable-heading { cursor: pointer; }
 
@@ -328,32 +240,52 @@
       align-items: center;
       justify-content: center;
       gap: 6px;
-      background: #f3f4f6;
-      color: var(--icon-color);
+      background: transparent;
+      color: var(--accent);
       border: none;
+      box-shadow: none;
       cursor: pointer;
       padding: 6px 8px;
       border-radius: 8px;
+      font: inherit;
     }
 
     button:hover {
-      background: #e5e7eb;
-      color: var(--primary);
+      background: transparent;
+      color: var(--ink);
     }
 
     button:disabled {
-      opacity: 0.4;
+      opacity: 0.35;
       cursor: not-allowed;
     }
 
-    button.secondary { background: #eef2ff; }
-
-    button.danger {
-      background: #fee2e2;
-      color: #b91c1c;
+    button.secondary,
+    button.danger,
+    .settingsBtn,
+    .backToTagsBtn {
+      background: transparent;
+      color: var(--accent);
     }
 
-    button.danger:hover { color: var(--danger); }
+    button.danger,
+    .dangerBtn {
+      color: var(--danger);
+    }
+
+    button.danger:hover,
+    .dangerBtn:hover {
+      color: #6e3a2e;
+      background: transparent;
+    }
+
+    .iconBtn,
+    .primaryBtn,
+    .dangerBtn {
+      width: 36px;
+      height: 36px;
+      padding: 0;
+    }
 
     .icon {
       width: 18px;
@@ -367,10 +299,10 @@
 
     .drawer {
       margin-top: 12px;
-      padding: 10px;
-      background: #f9fafb;
+      padding: 10px 0;
+      background: transparent;
       border: none;
-      border-radius: 10px;
+      border-radius: 0;
       display: none;
       overflow-y: auto;
       flex-shrink: 0;
@@ -381,22 +313,31 @@
     #searchInput {
       width: 100%;
       margin-top: 8px;
+      border-bottom: 1px solid var(--line);
+      border-radius: 0;
+      background: transparent;
     }
 
     .notesList {
       margin-top: 10px;
       display: grid;
-      gap: 6px;
+      gap: 2px;
     }
 
-    .noteCard {
-      background: #fff;
+    .noteCard,
+    .recentItem {
+      background: transparent;
       border: none;
-      border-radius: 10px;
-      padding: 8px 10px;
+      border-radius: 0;
+      padding: 8px 2px;
+      cursor: pointer;
     }
 
-    .noteCard:hover { background: #f9fafb; }
+    .noteCard:hover,
+    .recentItem:hover {
+      background: transparent;
+      color: var(--accent);
+    }
 
     .noteCard h3 {
       font-size: 15px;
@@ -406,6 +347,19 @@
 
     .noteCard .meta,
     .recentItem .time { display: none; }
+
+    .recentList {
+      margin-top: 10px;
+      display: grid;
+      gap: 2px;
+    }
+
+    .recentItem { font-size: 13px; }
+
+    .recentItem .title {
+      font-weight: 600;
+      margin-bottom: 0;
+    }
 
     .calendarPanel {
       margin-top: 0;
@@ -431,8 +385,8 @@
     }
 
     .calendarCell {
-      background: #fff;
-      border: 1px solid #e5e7eb;
+      background: transparent;
+      border: 1px solid var(--line);
       border-radius: 8px;
       padding: 5px 2px;
       text-align: center;
@@ -440,23 +394,23 @@
       cursor: pointer;
       user-select: none;
       min-width: 0;
-      box-sizing: border-box;
+      color: var(--ink);
     }
 
     .calendarCell:hover {
-      border-color: var(--primary);
-      background: #eef2ff;
+      border-color: var(--accent);
+      background: transparent;
     }
 
     .calendarCell.hasNote {
-      background: #ecfdf5;
-      border-color: #a7f3d0;
+      background: transparent;
+      border-color: var(--accent);
       font-weight: 600;
     }
 
     .calendarCell.today {
       outline: none;
-      box-shadow: inset 0 0 0 2px var(--primary);
+      box-shadow: inset 0 0 0 1px var(--accent);
     }
 
     .calendarWeekday {
@@ -466,40 +420,19 @@
       padding: 4px 0;
     }
 
-    .recentList {
-      margin-top: 10px;
-      display: grid;
-      gap: 6px;
-    }
-
-    .recentItem {
-      background: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 6px 8px;
-      font-size: 13px;
-      cursor: pointer;
-    }
-
-    .recentItem:hover { background: #eef2ff; }
-
-    .recentItem .title {
-      font-weight: 600;
-      margin-bottom: 0;
-    }
-
     .task-checkbox {
       appearance: none;
       width: 18px;
       height: 18px;
       margin: 0 7px 0 0;
       padding: 0;
-      border: 0;
+      border: 1px solid var(--accent);
       border-radius: 50%;
-      background: #9aa0a6;
+      background: transparent;
       vertical-align: -4px;
       cursor: pointer;
       position: relative;
+      color: var(--accent);
     }
 
     .task-checkbox::after {
@@ -507,7 +440,7 @@
       inset: 0;
       display: grid;
       place-items: center;
-      color: white;
+      color: var(--accent);
       font-size: 12px;
       font-weight: 700;
     }
@@ -519,14 +452,24 @@
     .task-checkbox[data-state="done"]::after { content: "\2713"; }
     .task-checkbox[data-state="cancelled"]::after { content: "\00D7"; }
 
-    .task-checkbox[data-state="backlog"] { background: #94a3b8; }
-    .task-checkbox[data-state="todo"] { background: #64748b; }
-    .task-checkbox[data-state="doing"] { background: #3b82f6; }
-    .task-checkbox[data-state="review"] { background: #f59e0b; }
-    .task-checkbox[data-state="done"] { background: #22c55e; }
-    .task-checkbox[data-state="cancelled"] { background: #ef4444; }
+    .task-checkbox[data-state="backlog"],
+    .task-checkbox[data-state="todo"],
+    .task-checkbox[data-state="doing"],
+    .task-checkbox[data-state="review"],
+    .task-checkbox[data-state="done"] {
+      background: transparent;
+      border-color: var(--accent);
+    }
 
-    .task-checkbox:hover { filter: brightness(0.88); }
+    .task-checkbox[data-state="cancelled"] {
+      background: transparent;
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .task-checkbox[data-state="cancelled"]::after { color: var(--danger); }
+
+    .task-checkbox:hover { filter: none; opacity: 0.75; }
 
     .task-text-done,
     .task-text-cancelled {
@@ -534,20 +477,12 @@
       text-decoration: line-through;
     }
 
-    #bodyInput {
-      font-family: ui-monospace, SFMono-Regular, Consolas,
-          "Liberation Mono", Menlo, Monaco, "Courier New", monospace;
-      font-size: 15px;
-      line-height: 1.65;
-      tab-size: 2;
-    }
-
     .panelOverlay {
       position: fixed;
       inset: 0;
       z-index: 1000;
       display: none;
-      background: rgba(17, 24, 39, 0.35);
+      background: rgba(44, 38, 28, 0.28);
       padding: 10px;
     }
 
@@ -566,8 +501,9 @@
       display: flex;
       flex-direction: column;
       border-radius: 12px;
-      background: var(--card);
-      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+      background: var(--paper);
+      border: 1px solid var(--line);
+      box-shadow: none;
     }
 
     #menuOverlay {
@@ -609,15 +545,13 @@
       flex: 0 0 auto;
       min-height: 0;
       margin-bottom: 8px;
+      background: transparent;
+      border-radius: 0;
     }
 
-    #menuOverlay .menuSection:last-child {
-      margin-bottom: 0;
-    }
+    #menuOverlay .menuSection:last-child { margin-bottom: 0; }
 
-    #menuOverlay .menuSection:not(.collapsed) {
-      flex: 1 1 0;
-    }
+    #menuOverlay .menuSection:not(.collapsed) { flex: 1 1 0; }
 
     #menuOverlay .menuSectionBody {
       flex: 1;
@@ -645,22 +579,7 @@
       flex-direction: column;
     }
 
-    @media (max-width: 600px) {
-      #menuOverlay {
-        padding: 16px 10px;
-      }
-
-      #menuOverlay .panelModal {
-        width: 100%;
-        max-width: none;
-        max-height: none;
-        margin-top: 0;
-      }
-    }
-
-    #menuOverlay .menuSection.collapsed .menuSectionBody {
-      display: none;
-    }
+    #menuOverlay .menuSection.collapsed .menuSectionBody { display: none; }
 
     .panelModalHeader {
       display: flex;
@@ -683,9 +602,7 @@
       margin-bottom: 10px;
     }
 
-    .menuToolbar button {
-      min-width: 36px;
-    }
+    .menuToolbar button { min-width: 36px; }
 
     .panelModalClose { flex: 0 0 auto; }
 
@@ -694,40 +611,36 @@
       overflow-y: auto;
     }
 
-    #calendarOverlay .panelModal {
-      max-width: 420px;
-    }
+    #calendarOverlay .panelModal { max-width: 420px; }
 
     .calendarHeader select {
       appearance: none;
       -webkit-appearance: none;
       min-height: 36px;
       padding: 7px 34px 7px 10px;
-      border: 1px solid #dbe1ea;
-      border-radius: 10px;
-      background-color: #fff;
-      color: var(--text);
+      border: none;
+      border-bottom: 1px solid var(--line);
+      border-radius: 0;
+      background-color: transparent;
+      color: var(--ink);
       font-weight: 600;
       cursor: pointer;
       background-image:
-          linear-gradient(45deg, transparent 50%, var(--muted) 50%),
-          linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+              linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+              linear-gradient(135deg, var(--muted) 50%, transparent 50%);
       background-position:
-          calc(100% - 15px) 15px,
-          calc(100% - 10px) 15px;
+              calc(100% - 15px) 15px,
+              calc(100% - 10px) 15px;
       background-size: 5px 5px, 5px 5px;
       background-repeat: no-repeat;
     }
 
-    .calendarHeader select:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.14);
-    }
-
+    .calendarHeader select:focus,
     .calendarHeader select:hover {
-      border-color: #b9c2d0;
-      background-color: #f9fafb;
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: none;
+      background-color: transparent;
     }
 
     #calendarMonthSelect { flex: 1 1 170px; }
@@ -747,7 +660,10 @@
 
     #tagsInput {
       width: 100%;
-      color: var(--text);
+      color: var(--ink);
+      background: transparent;
+      border-bottom: 1px solid var(--line);
+      border-radius: 0;
     }
 
     .tagsHint {
@@ -761,7 +677,7 @@
       flex-shrink: 0;
       margin-top: auto;
       padding: 6px 0 2px;
-      border-top: 1px solid #eef0f3;
+      border-top: 1px solid var(--line);
     }
 
     .noteTagsView.visible {
@@ -775,36 +691,38 @@
       display: inline-flex;
       align-items: center;
       min-height: 26px;
-      padding: 3px 9px;
-      border-radius: 999px;
-      background: #eef2ff;
-      color: var(--primary);
+      padding: 3px 0;
+      margin-right: 10px;
+      border-radius: 0;
+      background: transparent;
+      color: var(--accent);
       font-size: 12px;
       cursor: pointer;
     }
 
-    .noteTag:hover { background: #e0e7ff; }
+    .noteTag:hover { background: transparent; color: var(--ink); }
 
     .menuSection {
       margin-bottom: 12px;
-      border-radius: 10px;
-      background: #fff;
+      border-radius: 0;
+      background: transparent;
       overflow: hidden;
     }
 
     .menuSectionHeader {
       width: 100%;
       justify-content: space-between;
-      padding: 9px 10px;
-      background: #eef2ff;
-      color: var(--text);
+      padding: 9px 2px;
+      background: transparent;
+      color: var(--ink);
       font-weight: 700;
       text-align: left;
+      border-bottom: 1px solid var(--line);
     }
 
     .menuSectionHeader:hover {
-      background: #e0e7ff;
-      color: var(--text);
+      background: transparent;
+      color: var(--ink);
     }
 
     .menuSectionChevron {
@@ -813,11 +731,9 @@
       transition: transform 0.15s ease;
     }
 
-    .menuSection.collapsed .menuSectionChevron {
-      transform: rotate(-90deg);
-    }
+    .menuSection.collapsed .menuSectionChevron { transform: rotate(-90deg); }
 
-    .menuSectionBody { padding: 8px; }
+    .menuSectionBody { padding: 8px 2px; }
     .menuSection.collapsed .menuSectionBody { display: none; }
 
     .menuSectionBody #searchInput {
@@ -837,24 +753,26 @@
     .tagsList,
     .tagPagesList {
       display: grid;
-      gap: 5px;
+      gap: 2px;
     }
 
     .tagLink,
-    .tagPageLink {
+    .tagPageLink,
+    #allTagsBtn {
       width: 100%;
       justify-content: flex-start;
-      padding: 7px 9px;
-      border-radius: 7px;
-      background: #f9fafb;
-      color: var(--text);
+      padding: 7px 2px;
+      border-radius: 0;
+      background: transparent;
+      color: var(--ink);
       text-align: left;
+      box-shadow: none;
     }
 
     .tagLink:hover,
     .tagPageLink:hover {
-      background: #eef2ff;
-      color: var(--primary);
+      background: transparent;
+      color: var(--accent);
     }
 
     .tagCount {
@@ -874,14 +792,14 @@
       width: 100%;
       justify-content: flex-start;
       margin-bottom: 5px;
-      background: #f3f4f6;
     }
 
     .settingsSection {
       margin-bottom: 16px;
-      padding: 12px;
-      background: #f9fafb;
-      border-radius: 10px;
+      padding: 12px 0;
+      background: transparent;
+      border-radius: 0;
+      border-bottom: 1px solid var(--line);
     }
 
     .settingsSection h3 {
@@ -907,37 +825,40 @@
     .settingsInput {
       width: 100%;
       margin-top: 4px;
-      padding: 8px;
+      padding: 8px 0;
+      background: transparent;
+      border-bottom: 1px solid var(--line);
+      border-radius: 0;
     }
 
     .settingsBtn {
       margin-top: 8px;
-      padding: 8px 12px;
-      background: var(--primary);
-      color: #fff;
+      padding: 8px 0;
+      background: transparent;
+      color: var(--accent);
     }
 
     .settingsBtn:hover {
-      background: #4338ca;
-      color: #fff;
+      background: transparent;
+      color: var(--ink);
     }
 
     .passwordSection {
       margin-top: 10px;
       padding-top: 10px;
-      border-top: 1px solid #e5e7eb;
+      border-top: 1px solid var(--line);
     }
 
     @media (max-width: 600px) {
       .app { padding: 10px; }
       .logo { font-size: 16px; }
-
       .toolbar { gap: 4px; }
 
       .toolbar button,
       .menuToolbar button {
         padding: 6px;
         min-width: 36px;
+        background: transparent;
       }
 
       #previewContainer { font-size: 15px; }
@@ -951,6 +872,7 @@
         margin-top: 18px;
         border-radius: 14px;
         padding: 12px 10px;
+        background: var(--paper);
       }
 
       #menuOverlay {
@@ -971,6 +893,7 @@
       }
     }
   </style>
+
 </head>
 <body>
   <div class="app">
